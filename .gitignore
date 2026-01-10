@@ -1,0 +1,25 @@
+# Environment
+.env
+
+# Secrets - only keep structure and examples
+secrets/*
+!secrets/.gitkeep
+!secrets/your-project/
+
+secrets/your-project/*
+!secrets/your-project/.gitkeep
+!secrets/your-project/example.env
+
+# Claude config - only keep template
+agents/claude/*
+!agents/claude/settings.json.example
+!agents/claude/.gitkeep
+
+# System
+*.log
+.DS_Store
+node_modules/
+
+# Repos - keep folder structure only
+repos/*
+!repos/.gitkeep

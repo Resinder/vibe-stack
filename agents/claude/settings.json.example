@@ -1,0 +1,10 @@
+{
+  "hasAcknowledgedDangerousSkipPermissions": true,
+  "hasCompletedOnboarding": true,
+  "theme": "dark",
+  "env": {
+    "ANTHROPIC_AUTH_TOKEN": "your-api-key",
+    "ANTHROPIC_BASE_URL": "https://api.anthropic.com",
+    "API_TIMEOUT_MS": "3000000"
+  }
+}

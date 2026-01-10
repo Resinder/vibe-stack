@@ -1,0 +1,84 @@
+services:
+  vibe-kanban:
+    image: node:20-slim
+    container_name: vibe-server
+    working_dir: /app
+    ports:
+      - "4000:4000"
+      - "3000-3100:3000-3100"
+    environment:
+      - PORT=4000
+      - HOST=0.0.0.0
+    volumes:
+      - vibe_config:/home/node/.vibe-kanban # Root yerine node kullanıcısı dizini
+      - vibe_data:/home/node/.local/share/vibe-kanban # Proje veritabanı (db.sqlite)
+      - ./repos:/repos
+      - ~/.ssh:/root/.ssh:ro
+      - ./secrets:/root/secrets:ro
+      - ./agents/claude:/home/node/.claude
+    command: >
+      sh -c "
+        # 1. Temel araçları yükle
+        apt-get update && apt-get install -y git ssh nano curl sudo &&
+        
+        # 2. İzinleri ayarla
+        chown -R node:node /repos /app /home/node &&
+
+        # 3. Claude Code'u global olarak yükle
+        echo '' &&
+        echo '========================================' &&
+        echo 'Claude Code yükleniyor...' &&
+        echo '========================================' &&
+        npm install -g @anthropic-ai/claude-code &&
+        echo '' &&
+        echo 'Claude Code versiyon kontrolü:' &&
+        claude --version &&
+        echo '' &&
+        echo 'Claude Code başarıyla yüklendi!' &&
+        echo '========================================' &&
+        echo '' &&
+
+        # 4. Claude config iznlerini ayarla
+        chown -R node:node /home/node/.claude &&
+
+        # 5. Proje Yapılandırması (KOPYALAMA - symlink değil)
+        echo '--- Projeler kontrol ediliyor ---' &&
+        for d in /repos/* ; do
+          if [ -d \"\$$d\" ]; then
+            proje_adi=\$$(basename \"\$$d\")
+            if [ -d \"/root/secrets/\$$proje_adi\" ]; then
+              cp -f /root/secrets/\$$proje_adi/.env.development \"\$$d/.env.development.local\" 2>/dev/null || true
+              cp -f /root/secrets/\$$proje_adi/.env.production \"\$$d/.env.production.local\" 2>/dev/null || true
+              chown node:node \"\$$d/.env.development.local\" \"\$$d/.env.production.local\" 2>/dev/null || true
+            fi
+          fi
+        done &&
+
+        echo '--- Secrets /root/secrets altinda, agent erisemez ---' &&
+
+        echo '--- Sistem Hazır! Vibe başlatılıyor... ---' &&
+        # 6. Vibe'ı node kullanıcısı ile başlat (su komutu ile)
+        su - node -c 'HOME=/home/node npm_config_cache=/home/node/.npm PORT=4000 HOST=0.0.0.0 CLAUDE_SKIP_PERMISSION_CHECK=true DANGEROUS_SKIP_PERMISSION=true npx vibe-kanban'"
+    restart: unless-stopped
+
+  # ====================================
+  # CODE-SERVER (Browser-based VS Code)
+  # ====================================
+  code-server:
+    image: codercom/code-server:latest
+    container_name: code-server
+    ports:
+      - "8443:8080"
+    environment:
+      - PASSWORD=${CODE_SERVER_PASSWORD:-dev123}
+      - DOCKER_USER=root
+    volumes:
+      - ./repos:/home/coder/repos              # Same workspace as vibe-kanban (bind mount)
+      - code_server_data:/home/coder            # User data persist
+      - ~/.ssh:/home/coder/.ssh:ro              # Git SSH access
+    restart: unless-stopped
+
+volumes:
+  vibe_config:
+  vibe_data:
+  code_server_data:
