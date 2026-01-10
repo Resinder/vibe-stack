@@ -23,7 +23,7 @@ Production-ready Docker setup for **Vibe-Kanban** + **Claude Code** AI coding pl
 ### 1. Clone the Repository
 
 ```bash
-[git clone https://github.com/halilbarim/vibe-stack.git]
+[git clone https://github.com/halilbarim/vibe-stack.git](https://github.com/halilbarim/vibe-stack.git)
 cd vibe-stack
 ```
 
