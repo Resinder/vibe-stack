@@ -16,6 +16,7 @@ services:
       - ~/.ssh:/root/.ssh:ro
       - ./secrets:/root/secrets:ro
       - ./agents/claude:/home/node/.claude
+      - ./dev-server.sh:/usr/local/bin/dev-server.sh:ro
     command: >
       sh -c "
         # 1. Temel araçları yükle
@@ -73,9 +74,9 @@ services:
       - PASSWORD=${CODE_SERVER_PASSWORD:-dev123}
       - DOCKER_USER=root
     volumes:
-      - ./repos:/home/coder/repos              # Same workspace as vibe-kanban (bind mount)
-      - code_server_data:/home/coder            # User data persist
-      - ~/.ssh:/home/coder/.ssh:ro              # Git SSH access
+      - ./repos:/home/coder/repos # Same workspace as vibe-kanban (bind mount)
+      - code_server_data:/home/coder # User data persist
+      - ~/.ssh:/home/coder/.ssh:ro # Git SSH access
     restart: unless-stopped
 
 volumes:

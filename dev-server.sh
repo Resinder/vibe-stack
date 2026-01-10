@@ -14,27 +14,24 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Check if project name is provided
+# Check if project name is provided or use current directory
 if [ -z "$1" ]; then
-    echo -e "${RED}❌ Error: Project name required${NC}"
-    echo ""
-    echo -e "${YELLOW}Usage: /app/dev-server.sh <project-name>${NC}"
-    echo ""
-    echo -e "${BLUE}Available projects in /repos:${NC}"
-    ls -1 /repos/ 2>/dev/null || echo "No projects found"
-    exit 1
-fi
-
-PROJECT_NAME="$1"
-PROJECT_DIR="/repos/${PROJECT_NAME}"
-
-# Verify project exists
-if [ ! -d "$PROJECT_DIR" ]; then
-    echo -e "${RED}❌ Error: Project '${PROJECT_NAME}' not found${NC}"
-    echo ""
-    echo -e "${BLUE}Available projects in /repos:${NC}"
-    ls -1 /repos/ 2>/dev/null || echo "No projects found"
-    exit 1
+    # No argument - use current directory
+    PROJECT_DIR="$(pwd)"
+    PROJECT_NAME="$(basename "$PROJECT_DIR")"
+    echo -e "${YELLOW}ℹ No project specified, using current directory${NC}"
+else
+    PROJECT_NAME="$1"
+    PROJECT_DIR="/repos/${PROJECT_NAME}"
+    
+    # Verify project exists
+    if [ ! -d "$PROJECT_DIR" ]; then
+        echo -e "${RED}❌ Error: Project '${PROJECT_NAME}' not found${NC}"
+        echo ""
+        echo -e "${BLUE}Available projects in /repos:${NC}"
+        ls -1 /repos/ 2>/dev/null || echo "No projects found"
+        exit 1
+    fi
 fi
 
 echo -e "${BLUE}======================================${NC}"
@@ -47,6 +44,18 @@ echo ""
 
 # Change to project directory
 cd "$PROJECT_DIR" || exit 1
+
+# Vibe Kanban worktree detection: if no package.json but exactly one subdirectory, use it
+if [ ! -f "package.json" ] && [ ! -f "index.html" ]; then
+    SUBDIRS=$(find . -maxdepth 1 -type d ! -name '.' | wc -l)
+    if [ "$SUBDIRS" -eq 1 ]; then
+        SUBDIR=$(find . -maxdepth 1 -type d ! -name '.' | head -1)
+        echo -e "${YELLOW}ℹ Detected Vibe Kanban worktree, entering: ${SUBDIR}${NC}"
+        cd "$SUBDIR" || exit 1
+        PROJECT_DIR="$(pwd)"
+        PROJECT_NAME="$(basename "$PROJECT_DIR")"
+    fi
+fi
 
 # Start dev server
 if [ -f "package.json" ]; then
