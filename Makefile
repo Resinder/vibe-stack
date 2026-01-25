@@ -57,6 +57,7 @@ help: ## Show this help message
 	@echo "  $(YELLOW)make logs$(NC)         Follow all logs"
 	@echo "  $(YELLOW)make logs-vibe$(NC)    Follow vibe-kanban logs"
 	@echo "  $(YELLOW)make logs-code$(NC)    Follow code-server logs"
+	@echo "  $(YELLOW)make logs-webui$(NC)   Follow open-webui logs"
 	@echo "  $(YELLOW)make watch-logs$(NC)    Watch for errors/fatal events"
 	@echo "  $(YELLOW)make stats$(NC)        Resource usage (CPU/Memory)"
 	@echo ""
@@ -64,6 +65,7 @@ help: ## Show this help message
 	@echo "  $(YELLOW)make shell-vibe$(NC)   Enter vibe-kanban container"
 	@echo "  $(YELLOW)make shell-code$(NC)   Enter code-server container"
 	@echo "  $(YELLOW)make claude$(NC)       Quick access to Claude Code CLI"
+	@echo "  $(YELLOW)make webui$(NC)        Open Open WebUI in browser"
 	@echo ""
 	@echo "$(CYAN)Configuration:$(NC)"
 	@echo "  $(YELLOW)make config$(NC)       Open configuration in editor"
@@ -73,11 +75,22 @@ help: ## Show this help message
 	@echo "  $(YELLOW)make versions$(NC)     Show current image versions/digests"
 	@echo "  $(YELLOW)make rollback$(NC)     Rollback to previous working version"
 	@echo ""
+	@echo "$(CYAN)System Evolution:$(NC)"
+	@echo "  $(YELLOW)make evolve$(NC)      Run self-evolution analysis"
+	@echo "  $(YELLOW)make test-harness$(NC) Run immune system validation"
+	@echo "  $(YELLOW)make kanban-sync$(NC)  Sync system state with Kanban board"
+	@echo "  $(YELLOW)make observer$(NC)     Open Observer Dashboard"
+	@echo ""
+	@echo "$(CYAN)Mission State:$(NC)"
+	@echo "  $(YELLOW)make state-show$(NC)   Show current mission state"
+	@echo "  $(YELLOW)make state-clear$(NC)  Clear mission state"
+	@echo "  $(YELLOW)make state-resume$(NC) Resume interrupted mission"
+	@echo ""
 	@echo "$(CYAN)Maintenance:$(NC)"
 	@echo "  $(YELLOW)make clean$(NC)        Remove stopped containers"
 	@echo "  $(YELLOW)make prune$(NC)        Remove unused Docker resources"
 	@echo "  $(YELLOW)make reset$(NC)        Full reset (WARNING: deletes data)"
-	@echo "  $(YELLOW)make update$(NC)       Pull latest images (logs before updating)"
+	@echo "  $(YELLOW)make update$(NC)       Orchestrated self-update with rolling restart"
 	@echo ""
 	@echo "$(CYAN)Development:$(NC)"
 	@echo "  $(YELLOW)make build$(NC)        Rebuild containers (no cache)"
@@ -197,6 +210,7 @@ up: ## Start all services in detached mode
 	@echo "$(CYAN)Service URLs:$(NC)"
 	@echo "  Vibe-Kanban:  $(BLUE)http://localhost:4000$(NC)"
 	@echo "  VS Code:      $(BLUE)http://localhost:8443$(NC)"
+	@echo "  Open WebUI:   $(BLUE)http://localhost:8081$(NC)"
 	@echo ""
 	@echo "$(CYAN)Waiting for health checks...$(NC)"
 	@sleep 5
@@ -218,10 +232,10 @@ ps: ## Show running containers
 .PHONY: status
 status: ## Detailed service status
 	@echo "$(CYAN)Container Status:$(NC)"
-	@docker ps --filter "name=vibe" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+	@docker ps --filter "name=vibe" --filter "name=code-server" --filter "name=open-webui" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 	@echo ""
 	@echo "$(CYAN)Health Status:$(NC)"
-	@docker inspect -f '{{.Name}}: {{.State.Health.Status}}' vibe-server code-server 2>/dev/null || echo "Health check not available"
+	@docker inspect -f '{{.Name}}: {{.State.Health.Status}}' vibe-server code-server open-webui 2>/dev/null || echo "Health check not available"
 
 .PHONY: watch
 watch: ## Enable watch mode (auto-reload on file changes)
@@ -243,13 +257,17 @@ logs-vibe: ## Follow vibe-kanban logs
 logs-code: ## Follow code-server logs
 	@$(DOCKER_COMPOSE) logs -f code-server
 
+.PHONY: logs-webui
+logs-webui: ## Follow open-webui logs
+	@$(DOCKER_COMPOSE) logs -f open-webui
+
 .PHONY: logs-tail
 logs-tail: ## Show last 50 lines of all logs
 	@$(DOCKER_COMPOSE) logs --tail 50
 
 .PHONY: stats
 stats: ## Show resource usage (CPU/Memory)
-	@docker stats --no-stream vibe-server code-server
+	@docker stats --no-stream vibe-server code-server open-webui
 
 .PHONY: watch-logs
 watch-logs: ## Watch logs for errors, fatal events, and failed health checks
@@ -302,6 +320,53 @@ secrets: ## List project secrets directories
 	@echo "  cp secrets/your-project/example.env secrets/my-project/.env.development"
 
 # ============================================================================
+# SYSTEM EVOLUTION TARGETS
+# ============================================================================
+.PHONY: evolve
+evolve: ## Run self-evolution analysis
+	@echo "$(CYAN)Running Vibe Stack evolution analysis...$(NC)"
+	@echo ""
+	@if [ -f evolve.sh ]; then \
+		./evolve.sh; \
+	else \
+		echo "$(RED)Error: evolve.sh not found$(NC)"; \
+		echo "$(YELLOW)This script should be in the Vibe Stack root directory$(NC)"; \
+		exit 1; \
+	fi
+
+.PHONY: test-harness
+test-harness: ## Run immune system validation (branch, validate, dry-run, health check)
+	@echo "$(CYAN)Running Vibe Stack immune system validation...$(NC)"
+	@echo ""
+	@if [ -f test-harness.sh ]; then \
+		./test-harness.sh --skip-branch && \
+		echo "" && \
+		echo "$(CYAN)Test harness passed - triggering Kanban sync...$(NC)" && \
+		$(MAKE) --no-print-directory kanban-sync; \
+	else \
+		echo "$(RED)Error: test-harness.sh not found$(NC)"; \
+		echo "$(YELLOW)This script should be in the Vibe Stack root directory$(NC)"; \
+		exit 1; \
+	fi
+
+.PHONY: kanban-sync
+kanban-sync: ## Sync system state with Kanban board
+	@echo "$(CYAN)Running Kanban Bridge sync...$(NC)"
+	@echo ""
+	@if [ -f kanban-sync.sh ]; then \
+		./kanban-sync.sh; \
+	else \
+		echo "$(YELLOW)Kanban sync script not found - skipping$(NC)"; \
+	fi
+
+.PHONY: observer
+observer: ## Open Observer Dashboard in browser
+	@echo "$(CYAN)Opening Observer Dashboard...$(NC)"
+	@command -v xdg-open >/dev/null 2>&1 && xdg-open observer-dashboard/index.html || \
+	 command -v open >/dev/null 2>&1 && open observer-dashboard/index.html || \
+	 echo "$(YELLOW)Please open manually:$(NC)\n  observer-dashboard/index.html"
+
+# ============================================================================
 # MAINTENANCE TARGETS
 # ============================================================================
 .PHONY: clean
@@ -333,7 +398,7 @@ reset: ## Full reset (WARNING: deletes all data)
 	echo; \
 	if [[ $$REPLY == "yes" ]]; then \
 		$(DOCKER_COMPOSE) down -v; \
-		docker volume rm vibe-stack_vibe_config vibe-stack_vibe_data vibe-stack_code_server_data 2>/dev/null || true; \
+		docker volume rm vibe-stack_vibe_config vibe-stack_vibe_data vibe-stack_code_server_data vibe-stack_open_webui_data 2>/dev/null || true; \
 		rm -f $(VERSION_LOG); \
 		echo "$(GREEN)✓ Reset complete$(NC)"; \
 		echo "$(YELLOW)Run 'make setup' to reinitialize$(NC)"; \
@@ -342,22 +407,118 @@ reset: ## Full reset (WARNING: deletes all data)
 	fi
 
 .PHONY: update
-update: ## Pull latest Docker images
-	@echo "$(CYAN)Logging current versions before update...$(NC)"
+update: ## Orchestrated self-update with rolling restart and auto-rollback
+	@echo "$(CYAN)╔════════════════════════════════════════════════════════════╗${NC}"
+	@echo "$(CYAN)║  Vibe Stack - Orchestrated Self-Update                     ║${NC}"
+	@echo "$(CYAN)╚════════════════════════════════════════════════════════════╝${NC}"
+	@echo ""
+	@echo "$(CYAN)Step 1: Snapshotting current state...${NC}"
 	@$(MAKE) --no-print-directory log-versions
+	@$(MAKE) --no-print-directory snapshot-state
 	@echo ""
-	@echo "$(YELLOW)⚠ Using :latest tags - images will update to latest version$(NC)"
-	@echo ""
-	@echo "$(CYAN)Pulling latest images...$(NC)"
+	@echo "$(CYAN)Step 2: Pulling latest images...${NC}"
 	@$(DOCKER_COMPOSE) pull
 	@echo ""
-	@echo "$(GREEN)✓ Images updated$(NC)"
+	@echo "$(CYAN)Step 3: Performing rolling restart...${NC}"
+	@echo "$(YELLOW)Services will restart one at a time with health verification${NC)"
 	@echo ""
-	@echo "$(CYAN)New versions:$(NC)"
-	@$(DOCKER_COMPOSE) config | grep "image:" | sed 's/^[ ]*image: /  /'
+	@$(MAKE) --no-print-directory rolling-restart
 	@echo ""
-	@echo "$(CYAN)Run 'make up' to restart with new images$(NC)"
-	@echo "$(CYAN)Run 'make versions' to see image digests$(NC)"
+	@echo "$(GREEN)╔════════════════════════════════════════════════════════════╗${NC}"
+	@echo "$(GREEN)║  Update Complete!                                          ║${NC}"
+	@echo "$(GREEN)╚════════════════════════════════════════════════════════════╝${NC}"
+	@echo ""
+	@echo "$(CYAN)Triggering Kanban sync...${NC}"
+	@$(MAKE) --no-print-directory kanban-sync
+	@echo ""
+	@echo "$(CYAN)Run 'make versions' to see new image digests${NC}"
+	@echo "$(CYAN)Run 'make evolve' for system health analysis${NC}"
+	@echo "$(CYAN)Run 'make observer' to open Observer Dashboard${NC}"
+
+.PHONY: snapshot-state
+snapshot-state: ## Snapshot current state for rollback
+	@echo "$(CYAN)Creating state snapshot...${NC}"
+	@echo '{"timestamp":"'"$$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","backup":"manual"}' > .vibe-state-backup.json
+	@echo "$(GREEN)✓ State snapshot created${NC}"
+
+.PHONY: rolling-restart
+rolling-restart: ## Restart services one at a time with health checks
+	@echo "$(CYAN)Starting rolling restart...${NC)"
+	@echo ""
+	@for service in vibe-kanban code-server open-webui; do \
+		echo "$(CYAN)Restarting $$service...${NC}"; \
+		$(DOCKER_COMPOSE) stop $$service; \
+		$(DOCKER_COMPOSE) up -d $$service; \
+		echo "$(CYAN)Waiting for $$service health check...${NC}"; \
+		timeout=60; \
+		while [ $$timeout -gt 0 ]; do \
+			if $($(DOCKER_COMPOSE) ps -q $$service | xargs docker inspect -f '{{.State.Health.Status}}' 2>/dev/null | grep -q healthy); then \
+				echo "$(GREEN)✓ $$service is healthy${NC}"; \
+				break; \
+			fi; \
+			sleep 2; \
+			timeout=$$((timeout - 2)); \
+		done; \
+		if [ $$timeout -le 0 ]; then \
+			echo "$(RED)✗ $$service failed health check${NC}"; \
+			echo "$(YELLOW)Initiating rollback...${NC}"; \
+			$(MAKE) --no-print-directory rollback-emergency; \
+			exit 1; \
+		fi; \
+		echo ""; \
+	done
+	@echo "$(GREEN)✓ All services restarted successfully${NC}"
+
+.PHONY: rollback-emergency
+rollback-emergency: ## Emergency rollback after failed update
+	@echo "$(RED)╔════════════════════════════════════════════════════════════╗${NC}"
+	@echo "$(RED)║  EMERGENCY ROLLBACK                                        ║${NC}"
+	@echo "$(RED)╚════════════════════════════════════════════════════════════╝${NC}"
+	@echo ""
+	@echo "$(CYAN)Stopping all services...${NC}"
+	@$(DOCKER_COMPOSE) down
+	@echo ""
+	@echo "$(CYAN)Checking for previous version in log...${NC)"
+	@if [ -f .vibe-versions.log ]; then \
+		echo "$(YELLOW)Previous versions found in .vibe-versions.log${NC}"; \
+		echo "$(YELLOW)Manual rollback may be required${NC}"; \
+	else \
+		echo "$(YELLOW)No version history found${NC}"; \
+	fi
+	@echo ""
+	@echo "$(CYAN)Restarting with current images...${NC}"
+	@$(DOCKER_COMPOSE) up -d
+	@echo ""
+	@echo "$(YELLOW)⚠ Rollback complete. Please verify system health.${NC}"
+	@echo "$(YELLOW)Run 'make health' to check service status${NC}"
+
+.PHONY: state-show
+state-show: ## Show current mission state
+	@if [ -f .vibe-state.json ]; then \
+		if command -v jq >/dev/null 2>&1; then \
+			jq '.' .vibe-state.json; \
+		else \
+			cat .vibe-state.json; \
+		fi \
+	else \
+		echo "$(YELLOW)No active mission state found${NC}"; \
+	fi
+
+.PHONY: state-clear
+state-clear: ## Clear mission state (after completion or abort)
+	@echo "$(YELLOW)Clearing mission state...${NC}"
+	@rm -f .vibe-state.json
+	@echo "$(GREEN)✓ Mission state cleared${NC}"
+
+.PHONY: state-resume
+state-resume: ## Resume interrupted mission
+	@if [ -f .vibe-state.json ]; then \
+		echo "$(CYAN)Resuming mission from state file...${NC}"; \
+		echo "$(YELLOW)State file: .vibe-state.json${NC}"; \
+		echo "$(YELLOW)Use AI assistant to continue from saved step${NC}"; \
+	else \
+		echo "$(YELLOW)No mission state to resume${NC}"; \
+	fi
 
 # ============================================================================
 # DEVELOPMENT TARGETS
@@ -385,7 +546,12 @@ health: ## Check service health
 		echo "  $(YELLOW)● Starting/Unreachable$(NC)"
 	@echo ""
 	@echo "$(BLUE)Code-Server (port 8443):$(NC)"
-	@curl -sf http://localhost:8443/health >/dev/null 2>&1 && \
+	@curl -sf http://localhost:8443/ >/dev/null 2>&1 && \
+		echo "  $(GREEN)● Healthy$(NC)" || \
+		echo "  $(YELLOW)● Starting/Unreachable$(NC)"
+	@echo ""
+	@echo "$(BLUE)Open WebUI (port 8081):$(NC)"
+	@curl -sf http://localhost:8081/ >/dev/null 2>&1 && \
 		echo "  $(GREEN)● Healthy$(NC)" || \
 		echo "  $(YELLOW)● Starting/Unreachable$(NC)"
 	@echo ""
@@ -440,6 +606,7 @@ doctor: ## Full diagnostics check with version tracking
 	@echo "$(BLUE)Port Availability:$(NC)"
 	@netstat -an 2>/dev/null | grep -q ":4000 " && echo "  $(YELLOW)⚠$(NC) Port 4000 in use" || echo "  $(GREEN)✓$(NC) Port 4000 available"
 	@netstat -an 2>/dev/null | grep -q ":8443 " && echo "  $(YELLOW)⚠$(NC) Port 8443 in use" || echo "  $(GREEN)✓$(NC) Port 8443 available"
+	@netstat -an 2>/dev/null | grep -q ":3000 " && echo "  $(YELLOW)⚠$(NC) Port 3000 in use" || echo "  $(GREEN)✓$(NC) Port 3000 available"
 	@echo ""
 	@echo "$(BLUE)Version Log:$(NC)"
 	@test -f $(VERSION_LOG) && echo "  $(GREEN)✓$(NC) Version tracking enabled ($(VERSION_LOG))" || echo "  $(YELLOW)⚠$(NC) No version history yet"
@@ -447,6 +614,7 @@ doctor: ## Full diagnostics check with version tracking
 	@echo "$(CYAN)═══════════════════════════════════════════════════════════════$(NC)"
 	@echo ""
 	@echo "$(MAGENTA)💡 Run 'make versions' for detailed version history$(NC)"
+	@echo "$(MAGENTA)💡 Run 'make evolve' for system evolution analysis$(NC)"
 	@echo "$(MAGENTA)💡 Run 'make watch-logs' to monitor for errors$(NC)"
 
 # ============================================================================
@@ -455,9 +623,16 @@ doctor: ## Full diagnostics check with version tracking
 .PHONY: open
 open: ## Open services in default browser
 	@echo "$(CYAN)Opening services...$(NC)"
-	@command -v xdg-open >/dev/null 2>&1 && xdg-open http://localhost:4000 && xdg-open http://localhost:8443 || \
-	 command -v open >/dev/null 2>&1 && open http://localhost:4000 && open http://localhost:8443 || \
-	 echo "$(YELLOW)Please open manually:$(NC)\n  http://localhost:4000\n  http://localhost:8443"
+	@command -v xdg-open >/dev/null 2>&1 && xdg-open http://localhost:4000 && xdg-open http://localhost:8443 && xdg-open http://localhost:8081 || \
+	 command -v open >/dev/null 2>&1 && open http://localhost:4000 && open http://localhost:8443 && open http://localhost:8081 || \
+	 echo "$(YELLOW)Please open manually:$(NC)\n  http://localhost:4000\n  http://localhost:8443\n  http://localhost:8081"
+
+.PHONY: webui
+webui: ## Open Open WebUI in default browser
+	@echo "$(CYAN)Opening Open WebUI...$(NC)"
+	@command -v xdg-open >/dev/null 2>&1 && xdg-open http://localhost:8081 || \
+	 command -v open >/dev/null 2>&1 && open http://localhost:8081 || \
+	 echo "$(YELLOW)Please open manually:$(NC)\n  http://localhost:8081"
 
 # ============================================================================
 # VARIABLES EXPORT

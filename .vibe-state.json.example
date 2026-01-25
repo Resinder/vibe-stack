@@ -1,0 +1,95 @@
+{
+  "_comment": "Vibe Stack Memory System - Tracks mission progress for resumption after interruption",
+  "_version": "1.0.0",
+  "_schema": {
+    "status": "active | paused | completed | failed",
+    "priority": "low | medium | high | critical",
+    "phase": "Discovery | Execution | Audit | Handover"
+  },
+  "mission": {
+    "id": "mission-20250125-001",
+    "title": "Example Multi-Step Refactor",
+    "description": "Add Postgres service and update docker-compose.yml",
+    "status": "active",
+    "priority": "high",
+    "phase": "Execution",
+    "created_at": "2025-01-25T10:00:00Z",
+    "updated_at": "2025-01-25T10:15:00Z"
+  },
+  "progress": {
+    "current_step": 3,
+    "total_steps": 7,
+    "step_name": "Update docker-compose.yml with Postgres service",
+    "percent_complete": 42
+  },
+  "steps_completed": [
+    {
+      "step": 1,
+      "name": "Analyze current docker-compose.yml",
+      "status": "completed",
+      "completed_at": "2025-01-25T10:02:00Z",
+      "notes": "Confirmed vibe-kanban, code-server, and open-webui services present"
+    },
+    {
+      "step": 2,
+      "name": "Create test-harness branch",
+      "status": "completed",
+      "completed_at": "2025-01-25T10:05:00Z",
+      "branch_created": "evolution/test-check-20250125-100500",
+      "notes": "Branch created successfully"
+    }
+  ],
+  "steps_pending": [
+    {
+      "step": 3,
+      "name": "Update docker-compose.yml with Postgres service",
+      "status": "in_progress",
+      "started_at": "2025-01-25T10:15:00Z"
+    },
+    {
+      "step": 4,
+      "name": "Run test-harness validation",
+      "status": "pending"
+    },
+    {
+      "step": 5,
+      "name": "Perform dry run and health checks",
+      "status": "pending"
+    },
+    {
+      "step": 6,
+      "name": "Merge to main if tests pass",
+      "status": "pending"
+    },
+    {
+      "step": 7,
+      "name": "Update .vibe-state.json to completed",
+      "status": "pending"
+    }
+  ],
+  "context": {
+    "branch": "evolution/test-check-20250125-100500",
+    "base_branch": "main",
+    "files_modified": [
+      "docker-compose.yml"
+    ],
+    "files_created": [],
+    "containers_affected": [
+      "vibe-server",
+      "code-server",
+      "open-webui"
+    ]
+  },
+  "rollback": {
+    "enabled": true,
+    "point": "main",
+    "backup_taken": true,
+    "backup_path": ".vibe-backup-20250125-100500.tar.gz"
+  },
+  "metadata": {
+    "initiated_by": "human",
+    "last_heartbeat": "2025-01-25T10:15:00Z",
+    "interrupt_reason": null,
+    "resumption_count": 0
+  }
+}

@@ -173,9 +173,10 @@ services:
       - ~/.ssh:/home/coder/.ssh:ro
 
     # Health check - verifies code-server is responding
-    # Fast interval (15s) for quick detection of breaking changes
+    # Note: /health endpoint requires auth, so we check root endpoint instead
+    # Reference: https://github.com/coder/code-server/issues/5461
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
       interval: 15s
       timeout: 10s
       retries: 3
@@ -204,6 +205,61 @@ services:
             - node_modules/
             - .git/
 
+  # ============================================================================
+  # OPEN WEBUI SERVICE (AI Model Interface)
+  # ============================================================================
+  open-webui:
+    # Open WebUI provides a web interface for AI model interaction
+    # Supports: OpenAI, Anthropic, Google, Ollama (local), and custom endpoints
+    # Reference: https://github.com/open-webui/open-webui
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+
+    # Network ports (moved to 8081 to avoid conflicts)
+    # Note: Original port 3000 conflicts with other dev servers
+    ports:
+      - "8081:8080"
+
+    # Environment variables
+    environment:
+      - ENABLE_OLLAMA_API=false
+      - DATA_DIR=/app/backend/data
+      - MODELS=
+
+    # Volume mounts
+    volumes:
+      # Open WebUI data (models, chats, settings)
+      - open_webui_data:/app/backend/data
+
+      # Optional: Mount models directory for local LLM support
+      # - ./models:/app/models
+
+    # Health check - verifies Open WebUI is responding
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Resource constraints (lightweight for UI; increase for local models)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'      # Maximum 1 CPU core (increase for local LLMs)
+          memory: 1G       # Maximum 1GB RAM (increase for local LLMs)
+        reservations:
+          cpus: '0.25'     # Minimum 0.25 CPU cores
+          memory: 256M     # Minimum 256MB RAM
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Dependency on code-server (optional, for workspace consistency)
+    depends_on:
+      code-server:
+        condition: service_healthy
+
 # ============================================================================
 # PERSISTENT VOLUMES
 # ============================================================================
@@ -218,4 +274,8 @@ volumes:
 
   # code-server user data (VS Code settings, extensions)
   code_server_data:
+    driver: local
+
+  # Open WebUI data (chats, models, settings)
+  open_webui_data:
     driver: local

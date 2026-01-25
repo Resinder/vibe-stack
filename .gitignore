@@ -67,6 +67,46 @@ docker-compose.override.yml
 # Version tracking log
 .vibe-versions.log
 
+# Mission state and memory (only keep example)
+.vibe-state.json
+!.vibe-state.json.example
+
+# State snapshots (for rollback)
+.vibe-state-backup.json
+
+# Immune response logs
+immune-response-*.log
+
+# Test harness branches are temporary, but log if needed
+# .vibe-test-branches.log
+
+# ============================================================================
+# SELF-CORRECTING PROTOCOL ARTIFACTS
+# ============================================================================
+
+# Temporary evolution branches are auto-created and deleted
+# evolution/test-check-* branches are not tracked
+
+# Test execution logs
+test-harness-*.log
+
+# Kanban Bridge state files
+.vibe-kanban-bridge.json
+.vibe-dashboard.json
+
+# Observer Dashboard data
+observer-dashboard/data/
+
+# ============================================================================
+# PHASE 6: AGENT INTELLIGENCE & VISUALIZATION
+# ============================================================================
+
+# Observer Dashboard cache and generated files
+.vibe-evolution-output.log
+
+# Kanban sync artifacts
+.vibe-kanban-*.json
+
 # ============================================================================
 # IDE & EDITOR CONFIGS
 # ============================================================================

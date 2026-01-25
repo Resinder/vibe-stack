@@ -654,6 +654,7 @@ display_summary() {
     echo -e "  ${BOLD}4. Access your services:${NC}"
     echo -e "     Vibe-Kanban:  ${BLUE}http://localhost:4000${NC}"
     echo -e "     VS Code:      ${BLUE}http://localhost:8443${NC}"
+    echo -e "     Open WebUI:   ${BLUE}http://localhost:8081${NC}"
     echo ""
     echo -e "${CYAN}Quick Commands:$(NC)"
     echo -e "     ${YELLOW}make help${NC}    - Show all available commands"
@@ -683,6 +684,102 @@ display_summary() {
 }
 
 # ============================================================================
+# STATE RESUMPTION (MEMORY SYSTEM)
+# ============================================================================
+
+check_state_resumption() {
+    local state_file=".vibe-state.json"
+
+    if [[ ! -f "$state_file" ]]; then
+        return 0  # No state to resume
+    fi
+
+    log_header "Mission State Detected"
+
+    # Parse state file
+    if ! command -v jq >/dev/null 2>&1; then
+        log_warning "jq not found - cannot parse state file"
+        log_info "Install jq for state resumption support"
+        return 0
+    fi
+
+    local mission_title
+    local mission_status
+    local current_step
+    local step_name
+    local percent_complete
+    local last_branch
+
+    mission_title=$(jq -r '.mission.title' "$state_file" 2>/dev/null || echo "Unknown")
+    mission_status=$(jq -r '.mission.status' "$state_file" 2>/dev/null || echo "unknown")
+    current_step=$(jq -r '.progress.current_step' "$state_file" 2>/dev/null || echo "?")
+    step_name=$(jq -r '.progress.step_name' "$state_file" 2>/dev/null || echo "Unknown step")
+    percent_complete=$(jq -r '.progress.percent_complete' "$state_file" 2>/dev/null || echo "0")
+    last_branch=$(jq -r '.context.branch' "$state_file" 2>/dev/null || echo "none")
+
+    echo ""
+    echo -e "${YELLOW}╔════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${YELLOW}║  SYSTEM WAS INTERRUPTED DURING MISSION                    ║${NC}"
+    echo -e "${YELLOW}╚════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "${BOLD}Mission:${NC} ${mission_title}"
+    echo -e "${BOLD}Status:${NC} ${mission_status}"
+    echo -e "${BOLD}Progress:${NC} Step ${current_step} - ${step_name}"
+    echo -e "${BOLD}Complete:${NC} ${percent_complete}%"
+
+    if [[ "$last_branch" != "null" ]] && [[ "$last_branch" != "none" ]]; then
+        echo -e "${BOLD}Branch:${NC} ${last_branch}"
+    fi
+
+    echo ""
+    echo -e "${CYAN}Pending Steps:${NC}"
+
+    # Show pending steps
+    jq -r '.steps_pending[]? | "  \(.step). \(.name) - \(.status)"' "$state_file" 2>/dev/null | while IFS= read -r step; do
+        echo "$step"
+    done
+
+    echo ""
+    echo -e "${CYAN}Resumption Options:${NC}"
+    echo "  1. ${GREEN}Resume${NC}      - Continue from step ${current_step}"
+    echo "  2. ${YELLOW}View Details${NC} - Show full mission state"
+    echo "  3. ${RED}Abort${NC}        - Clear state and start fresh"
+    echo ""
+
+    if [[ -z "$SKIP_INTERACTIVE" ]]; then
+        read -p "Choose an option [1/2/3]: " -n 1 -r
+        echo ""
+
+        case $REPLY in
+            1)
+                log_info "Resuming mission from step ${current_step}..."
+                log_info "State file preserved for AI-assisted resumption"
+                log_info "Use 'make state-resume' to continue the mission"
+                ;;
+            2)
+                echo ""
+                jq '.' "$state_file" 2>/dev/null || cat "$state_file"
+                echo ""
+                log_info "Review the state above, then run init.sh again to choose"
+                exit 0
+                ;;
+            3)
+                log_warning "Aborting mission..."
+                rm -f "$state_file"
+                log_success "State cleared"
+                ;;
+            *)
+                log_info "No action taken - state preserved"
+                ;;
+        esac
+    else
+        log_info "State file preserved - use 'make state-resume' to continue"
+    fi
+
+    echo ""
+}
+
+# ============================================================================
 # MAIN EXECUTION
 # ============================================================================
 
@@ -691,6 +788,9 @@ main() {
 
     # Change to script directory
     cd "$SCRIPT_DIR" || exit 1
+
+    # Check for mission state resumption FIRST (before any setup)
+    check_state_resumption
 
     # Run setup steps with self-healing
     check_prerequisites || exit 1
