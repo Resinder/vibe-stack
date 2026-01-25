@@ -9,6 +9,7 @@
 
 import { Validator } from '../middleware/validation.js';
 import { ErrorHandler, PlanningError } from '../middleware/errorHandler.js';
+import { CONFIG } from '../config/constants.js';
 
 /**
  * Planning Controller - Planning operations
@@ -71,7 +72,7 @@ export class PlanningController {
                 created.map((t, i) =>
                   `  ${i + 1}. ${t.title} (${t.estimatedHours}h, ${t.priority})`
                 ).join('\n') +
-                `\n\n✨ View in Vibe Kanban: http://localhost:4000`
+                `\n\n✨ View in Vibe Kanban: ${CONFIG.vibeKanbanUrl}`
         }]
       };
     } catch (error) {

@@ -10,6 +10,7 @@
 import { Task } from '../core/models.js';
 import { Validator } from '../middleware/validation.js';
 import { ErrorHandler, TaskNotFoundError, InvalidLaneError } from '../middleware/errorHandler.js';
+import { CONFIG } from '../config/constants.js';
 
 /**
  * Task Controller - Task-related operations
@@ -49,7 +50,7 @@ export class TaskController {
                 `  Lane: ${task.lane}\n` +
                 `  Priority: ${task.priority}\n` +
                 `  ID: ${task.id}\n` +
-                `  View at: http://localhost:4000`
+                `  View at: ${CONFIG.vibeKanbanUrl}`
         }]
       };
     } catch (error) {

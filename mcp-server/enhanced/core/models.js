@@ -7,6 +7,8 @@
  * ============================================================================
  */
 
+import { LANES, PRIORITY } from '../config/constants.js';
+
 /**
  * Task domain model with validation
  * @class Task
@@ -50,10 +52,10 @@ export class Task {
   metadata;
 
   /** @type {string[]} Valid lane values */
-  static VALID_LANES = ['backlog', 'todo', 'in_progress', 'done', 'recovery'];
+  static VALID_LANES = LANES.ALL;
 
   /** @type {string[]} Valid priority values */
-  static VALID_PRIORITIES = ['low', 'medium', 'high', 'critical'];
+  static VALID_PRIORITIES = PRIORITY.ALL;
 
   /**
    * Create a new Task instance with validation
@@ -147,7 +149,7 @@ export class Board {
   metadata;
 
   /** @type {string[]} Valid lane names */
-  static VALID_LANES = ['backlog', 'todo', 'in_progress', 'done', 'recovery'];
+  static VALID_LANES = LANES.ALL;
 
   /**
    * Create a new Board instance

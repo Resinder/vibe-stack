@@ -8,6 +8,7 @@
  */
 
 import { ValidationError } from '../core/models.js';
+import { LANES, PRIORITY } from '../config/constants.js';
 import path from 'path';
 
 /**
@@ -30,12 +31,12 @@ export class Validator {
   /**
    * Valid lanes
    */
-  static VALID_LANES = ['backlog', 'todo', 'in_progress', 'done', 'recovery'];
+  static VALID_LANES = LANES.ALL;
 
   /**
    * Valid priorities
    */
-  static VALID_PRIORITIES = ['low', 'medium', 'high', 'critical'];
+  static VALID_PRIORITIES = PRIORITY.ALL;
 
   /**
    * Sanitize a string input

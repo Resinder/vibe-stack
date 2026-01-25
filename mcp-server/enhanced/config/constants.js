@@ -15,15 +15,15 @@ export const CONFIG = {
   name: 'vibe-stack-mcp',
   version: '2.0.0',
 
+  // URLs
+  vibeKanbanUrl: process.env.VIBE_KANBAN_URL || 'http://localhost:4000',
+
   // Paths
   bridgeFilePath: process.env.BRIDGE_FILE || '/data/.vibe-kanban-bridge.json',
   customPanelPath: '/custom/kanban-panel.html',
 
   // HTTP Server
-  httpPort: parseInt(process.env.HTTP_PORT || '4001', 10),
-
-  // MCP Tools
-  tools: TOOLS
+  httpPort: parseInt(process.env.HTTP_PORT || '4001', 10)
 };
 
 /**

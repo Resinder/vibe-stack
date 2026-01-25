@@ -11,6 +11,7 @@ import express from 'express';
 import { TaskController } from '../controllers/taskController.js';
 import { BoardController } from '../controllers/boardController.js';
 import { PlanningController } from '../controllers/planningController.js';
+import { CONFIG } from '../config/constants.js';
 
 /**
  * Setup HTTP routes
@@ -103,7 +104,7 @@ export function setupRoutes(app, taskController, boardController, planningContro
             hours: t.estimatedHours
           }))
         },
-        boardUrl: 'http://localhost:4000',
+        boardUrl: CONFIG.vibeKanbanUrl,
         timestamp: new Date().toISOString()
       });
     } catch (error) {
@@ -119,7 +120,7 @@ export function setupRoutes(app, taskController, boardController, planningContro
       board,
       stats,
       timestamp: new Date().toISOString(),
-      url: 'http://localhost:4000'
+      url: CONFIG.vibeKanbanUrl
     });
   });
 
