@@ -965,6 +965,149 @@ function startHttpServer(controller) {
     res.json({ received: true });
   });
 
+  // ============================================================================
+  // OPENAI-COMPATIBLE API ENDPOINTS
+  // ============================================================================
+  // These endpoints allow Open WebUI to call Vibe tools directly via HTTP
+
+  // OpenAI-compatible chat completions endpoint
+  // Allows Open WebUI to use Vibe tools as function calling
+  app.post('/v1/chat/completions', async (req, res) => {
+    const { messages, functions, function_call } = req.body;
+
+    // Check if there's a function call request
+    if (function_call && functions) {
+      const fn = functions.find(f => f.name === function_call.name);
+      if (fn) {
+        try {
+          const args = JSON.parse(function_call.arguments || '{}');
+          const result = await controller.handleToolCall(fn.name, args);
+
+          // Return OpenAI-compatible response
+          res.json({
+            id: `chatcmpl-${Date.now()}`,
+            object: 'chat.completion',
+            created: Math.floor(Date.now() / 1000),
+            model: 'vibe-stack',
+            choices: [{
+              index: 0,
+              message: {
+                role: 'assistant',
+                content: null,
+                function_call: {
+                  name: fn.name,
+                  arguments: JSON.stringify(result)
+                }
+              },
+              finish_reason: 'function_call'
+            }]
+          });
+          return;
+        } catch (error) {
+          res.status(500).json({ error: error.message });
+          return;
+        }
+      }
+    }
+
+    // Regular chat (echo for now)
+    const lastMessage = messages?.[messages.length - 1];
+    res.json({
+      id: `chatcmpl-${Date.now()}`,
+      object: 'chat.completion',
+      created: Math.floor(Date.now() / 1000),
+      model: 'vibe-stack',
+      choices: [{
+        index: 0,
+        message: {
+          role: 'assistant',
+          content: 'Vibe Stack MCP server running. Use function calling to interact with tools.'
+        },
+        finish_reason: 'stop'
+      }]
+    });
+  });
+
+  // List available functions/tools
+  app.get('/v1/functions', (req, res) => {
+    res.json({
+      object: 'list',
+      data: TOOLS.map(tool => ({
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.inputSchema
+      }))
+    });
+  });
+
+  // Direct tool execution endpoint (simpler than full OpenAI format)
+  app.post('/v1/tools/:toolName', async (req, res) => {
+    const { toolName } = req.params;
+    const args = req.body || {};
+
+    try {
+      const result = await controller.handleToolCall(toolName, args);
+      res.json({
+        success: true,
+        tool: toolName,
+        result: result.content[0]?.text || result,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        tool: toolName,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Quick plan generation endpoint (for easy access)
+  app.post('/v1/plan', async (req, res) => {
+    const { goal, context, targetLane = 'backlog' } = req.body;
+
+    if (!goal) {
+      return res.status(400).json({ error: 'Missing required field: goal' });
+    }
+
+    try {
+      const result = await controller.handleToolCall('vibe_generate_plan', { goal, context, targetLane });
+      const tasks = controller.boardService.board.getAllTasks();
+
+      res.json({
+        success: true,
+        goal,
+        plan: {
+          totalTasks: tasks.length,
+          totalHours: tasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0),
+          tasks: tasks.slice(-10).map(t => ({
+            title: t.title,
+            priority: t.priority,
+            hours: t.estimatedHours
+          }))
+        },
+        boardUrl: 'http://localhost:4000',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Board snapshot endpoint
+  app.get('/v1/board/snapshot', (req, res) => {
+    const board = controller.boardService.board.toJSON();
+    const stats = controller.boardService.getStats();
+
+    res.json({
+      board,
+      stats,
+      timestamp: new Date().toISOString(),
+      url: 'http://localhost:4000'
+    });
+  });
+
   // API proxy for Vibe Kanban (when native API is available)
   app.all('/api/*', async (req, res) => {
     // Placeholder for future Vibe Kanban API proxy
