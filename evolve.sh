@@ -123,12 +123,12 @@ collect_resource_usage() {
 
     local recommendations=0
 
-    # Get stats for all vibe containers
+    # Get stats for all vibe containers (output to stderr to not interfere with return value)
     local stats_output
     stats_output=$(docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" vibe-server code-server open-webui 2>/dev/null || echo "")
 
     if [[ -n "$stats_output" ]]; then
-        echo "$stats_output"
+        echo "$stats_output" >&2
     fi
 
     # Analyze each container
@@ -142,11 +142,11 @@ collect_resource_usage() {
             local mem_usage
 
             # Parse CPU percentage (remove % and convert to integer)
-            cpu_usage=$(echo "$cpu_mem" | awk '{print $1}' | sed 's/%//')
-            # Parse memory percentage
-            mem_usage=$(echo "$cpu_mem" | awk '{print $2}' | sed 's/%//')
+            cpu_usage=$(echo "$cpu_mem" | awk '{print $1}' | sed 's/%//' | cut -d'.' -f1)
+            # Parse memory percentage (convert to integer)
+            mem_usage=$(echo "$cpu_mem" | awk '{print $2}' | sed 's/%//' | cut -d'.' -f1)
 
-            # Check thresholds
+            # Check thresholds (using integer comparison)
             if [[ -n "$cpu_usage" ]] && [[ "$cpu_usage" -gt $CPU_WARNING_THRESHOLD ]]; then
                 log_warning "${container}: CPU usage at ${cpu_usage}%"
                 log_recommendation "Consider increasing CPU limit for ${container}"
@@ -252,9 +252,11 @@ collect_configuration_audit() {
     fi
 
     # Check docker-compose.yml syntax
-    if ! docker-compose -f "${SCRIPT_DIR}/docker-compose.yml" config >/dev/null 2>&1; then
+    if ! docker compose -f "${SCRIPT_DIR}/docker-compose.yml" config >/dev/null 2>&1; then
         log_error "docker-compose.yml syntax error"
         ((issues++))
+    else
+        log_success "docker-compose.yml syntax valid"
     fi
 
     return $issues
@@ -392,9 +394,9 @@ main() {
     local config_issues
 
     health_status=$(collect_health_status)
-    resource_issues=$(collect_resource_usage)
+    collect_resource_usage; resource_issues=$?
     collect_image_versions || has_updates=true
-    config_issues=$(collect_configuration_audit)
+    collect_configuration_audit; config_issues=$?
 
     # Generate proposal
     generate_evolution_proposal "$health_status" "$resource_issues" "$has_updates" "$config_issues"
