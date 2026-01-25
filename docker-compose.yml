@@ -1,85 +1,221 @@
+# ============================================================================
+# Vibe Stack - Docker Compose Configuration
+# ============================================================================
+# Production-ready Docker orchestration for:
+#   - Vibe-Kanban: AI agent orchestration platform
+#   - Claude Code: AI-powered coding assistant
+#   - code-server: Browser-based VS Code
+#
+# Compose Specification: V2 (version key deprecated/omitted)
+# Image Strategy: :latest tags with enhanced health monitoring
+# Documentation: See README.md and HELPER.md
+# ============================================================================
+
 services:
+  # ============================================================================
+  # VIBE-KANBAN SERVICE (AI Agent Orchestration)
+  # ============================================================================
   vibe-kanban:
+    # Using :latest for Node.js LTS (auto-updates with security patches)
+    # Health checks detect breaking changes immediately
+    # Reference: https://hub.docker.com/_/node
     image: node:20-slim
     container_name: vibe-server
     working_dir: /app
+
+    # Network ports
     ports:
-      - "4000:4000"
-      - "3000-3100:3000-3100"
+      - "4000:4000"      # Vibe-Kanban primary port
+      - "3000-3100:3000-3100"  # Dev server port range for projects
+
+    # Environment variables
     environment:
       - PORT=4000
       - HOST=0.0.0.0
+      - NODE_ENV=production
+
+    # Volume mounts
     volumes:
-      - vibe_config:/home/node/.vibe-kanban # Root yerine node kullanıcısı dizini
-      - vibe_data:/home/node/.local/share/vibe-kanban # Proje veritabanı (db.sqlite)
+      # Vibe-Kanban configuration and data persistence
+      - vibe_config:/home/node/.vibe-kanban
+      - vibe_data:/home/node/.local/share/vibe-kanban
+
+      # Workspace directory for projects
       - ./repos:/repos
+
+      # SSH keys (read-only) for git operations
       - ~/.ssh:/root/.ssh:ro
+
+      # Project secrets (read-only, isolated from agent)
       - ./secrets:/root/secrets:ro
+
+      # Claude Code configuration (agent-accessible)
       - ./agents/claude:/home/node/.claude
+
+      # Development server script
       - ./dev-server.sh:/usr/local/bin/dev-server.sh:ro
+
+    # Startup command with full environment setup
     command: >
       sh -c "
-        # 1. Temel araçları yükle
+        # ====================================================================
+        # STEP 1: Install base system dependencies
+        # ====================================================================
         apt-get update && apt-get install -y git ssh nano curl sudo &&
-        
-        # 2. İzinleri ayarla
+
+        # ====================================================================
+        # STEP 2: Configure file permissions
+        # ====================================================================
         chown -R node:node /repos /app /home/node &&
 
-        # 3. Claude Code'u global olarak yükle
+        # ====================================================================
+        # STEP 3: Install Claude Code globally
+        # ====================================================================
         echo '' &&
         echo '========================================' &&
-        echo 'Claude Code yükleniyor...' &&
+        echo 'Installing Claude Code...' &&
         echo '========================================' &&
         npm install -g @anthropic-ai/claude-code &&
         echo '' &&
-        echo 'Claude Code versiyon kontrolü:' &&
+        echo 'Claude Code version check:' &&
         claude --version &&
         echo '' &&
-        echo 'Claude Code başarıyla yüklendi!' &&
+        echo 'Claude Code installed successfully!' &&
         echo '========================================' &&
         echo '' &&
 
-        # 4. Claude config iznlerini ayarla
+        # ====================================================================
+        # STEP 4: Configure Claude permissions
+        # ====================================================================
         chown -R node:node /home/node/.claude &&
 
-        # 5. Proje Yapılandırması (KOPYALAMA - symlink değil)
-        echo '--- Projeler kontrol ediliyor ---' &&
+        # ====================================================================
+        # STEP 5: Project configuration (copy secrets, not symlinks)
+        # ====================================================================
+        echo '--- Checking projects ---' &&
         for d in /repos/* ; do
           if [ -d \"\$$d\" ]; then
-            proje_adi=\$$(basename \"\$$d\")
-            if [ -d \"/root/secrets/\$$proje_adi\" ]; then
-              cp -f /root/secrets/\$$proje_adi/.env.development \"\$$d/.env.development.local\" 2>/dev/null || true
-              cp -f /root/secrets/\$$proje_adi/.env.production \"\$$d/.env.production.local\" 2>/dev/null || true
+            project_name=\$$(basename \"\$$d\")
+            if [ -d \"/root/secrets/\$$project_name\" ]; then
+              cp -f /root/secrets/\$$project_name/.env.development \"\$$d/.env.development.local\" 2>/dev/null || true
+              cp -f /root/secrets/\$$project_name/.env.production \"\$$d/.env.production.local\" 2>/dev/null || true
               chown node:node \"\$$d/.env.development.local\" \"\$$d/.env.production.local\" 2>/dev/null || true
             fi
           fi
         done &&
 
-        echo '--- Secrets /root/secrets altinda, agent erisemez ---' &&
+        echo '--- Secrets stored in /root/secrets (inaccessible to agent) ---' &&
 
-        echo '--- Sistem Hazır! Vibe başlatılıyor... ---' &&
-        # 6. Vibe'ı node kullanıcısı ile başlat (su komutu ile)
-        su - node -c 'HOME=/home/node npm_config_cache=/home/node/.npm PORT=4000 HOST=0.0.0.0 CLAUDE_SKIP_PERMISSION_CHECK=true DANGEROUS_SKIP_PERMISSION=true npx vibe-kanban'"
+        echo '--- System ready! Starting Vibe-Kanban... ---' &&
+
+        # ====================================================================
+        # STEP 6: Start Vibe-Kanban as node user
+        # ====================================================================
+        su - node -c 'HOME=/home/node npm_config_cache=/home/node/.npm PORT=4000 HOST=0.0.0.0 CLAUDE_SKIP_PERMISSION_CHECK=true DANGEROUS_SKIP_PERMISSION=true npx vibe-kanban'
+      "
+
+    # Health check - verifies Vibe-Kanban is responding
+    # Fast interval (15s) for quick detection of breaking changes
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    # Resource constraints (prevent runaway processes)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'      # Maximum 2 CPU cores
+          memory: 2G       # Maximum 2GB RAM
+        reservations:
+          cpus: '0.5'      # Minimum 0.5 CPU cores
+          memory: 512M     # Minimum 512MB RAM
+
+    # Restart policy
     restart: unless-stopped
 
-  # ====================================
-  # CODE-SERVER (Browser-based VS Code)
-  # ====================================
+    # Dependency on code-server (optional, for workspace consistency)
+    depends_on:
+      code-server:
+        condition: service_healthy
+
+  # ============================================================================
+  # CODE-SERVER SERVICE (Browser-based VS Code)
+  # ============================================================================
   code-server:
+    # Using :latest for automatic updates
+    # Health checks detect breaking changes immediately
+    # Reference: https://hub.docker.com/r/codercom/code-server
     image: codercom/code-server:latest
     container_name: code-server
+
+    # Network ports (internal 8080 mapped to external 8443)
     ports:
       - "8443:8080"
+
+    # Environment variables
     environment:
       - PASSWORD=${CODE_SERVER_PASSWORD:-dev123}
       - DOCKER_USER=root
+      - DEFAULT_WORKSPACE=/home/coder/repos
+
+    # Volume mounts
     volumes:
-      - ./repos:/home/coder/repos # Same workspace as vibe-kanban (bind mount)
-      - code_server_data:/home/coder # User data persist
-      - ~/.ssh:/home/coder/.ssh:ro # Git SSH access
+      # Shared workspace (same as vibe-kanban)
+      - ./repos:/home/coder/repos
+
+      # User data persistence (settings, extensions, etc.)
+      - code_server_data:/home/coder
+
+      # SSH keys (read-only) for git operations
+      - ~/.ssh:/home/coder/.ssh:ro
+
+    # Health check - verifies code-server is responding
+    # Fast interval (15s) for quick detection of breaking changes
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Resource constraints (lightweight IDE usage)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'      # Maximum 1 CPU core
+          memory: 1G       # Maximum 1GB RAM
+        reservations:
+          cpus: '0.25'     # Minimum 0.25 CPU cores
+          memory: 256M     # Minimum 256MB RAM
+
+    # Restart policy
     restart: unless-stopped
 
+    # Development mode configuration (hot-reload for code-server)
+    develop:
+      watch:
+        - path: ./repos
+          action: sync
+          target: /home/coder/repos
+          ignore:
+            - node_modules/
+            - .git/
+
+# ============================================================================
+# PERSISTENT VOLUMES
+# ============================================================================
 volumes:
+  # Vibe-Kanban configuration (settings, preferences)
   vibe_config:
+    driver: local
+
+  # Vibe-Kanban data (SQLite database, projects)
   vibe_data:
+    driver: local
+
+  # code-server user data (VS Code settings, extensions)
   code_server_data:
+    driver: local

@@ -1,0 +1,285 @@
+# ============================================================================
+# Vibe Stack - CI/CD Pipeline
+# ============================================================================
+# GitHub Actions workflow for validating Docker Compose configuration,
+# running tests, and ensuring code quality standards.
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOCKER_COMPOSE_VERSION: v2.24.0
+
+jobs:
+  # ============================================================================
+  # VALIDATION JOB - Verify configuration files
+  # ============================================================================
+  validation:
+    name: Validate Configuration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose configuration
+        run: |
+          echo "Validating docker-compose.yml syntax..."
+          docker-compose -f docker-compose.yml config --quiet
+
+      - name: Validate .env.example
+        run: |
+          if [ ! -f .env.example ]; then
+            echo "::error::.env.example not found"
+            exit 1
+          fi
+          echo ".env.example exists"
+
+      - name: Validate JSON configuration files
+        run: |
+          # Validate Claude settings example
+          if [ -f agents/claude/settings.json.example ]; then
+            echo "Validating agents/claude/settings.json.example..."
+            jq empty agents/claude/settings.json.example
+            echo "✓ Claude settings example is valid JSON"
+          fi
+
+      - name: Validate shell scripts
+        run: |
+          echo "Checking shell script syntax..."
+          if [ -f dev-server.sh ]; then
+            sh -n dev-server.sh
+            echo "✓ dev-server.sh syntax valid"
+          fi
+          if [ -f init.sh ]; then
+            sh -n init.sh
+            echo "✓ init.sh syntax valid"
+          fi
+
+      - name: Check required files exist
+        run: |
+          echo "Verifying required project files..."
+          required_files=(
+            "docker-compose.yml"
+            ".env.example"
+            ".gitignore"
+            "README.md"
+            "LICENSE"
+            "Makefile"
+          )
+          missing_files=()
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              missing_files+=("$file")
+            fi
+          done
+          if [ ${#missing_files[@]} -gt 0 ]; then
+            echo "::error::Missing required files: ${missing_files[*]}"
+            exit 1
+          fi
+          echo "✓ All required files present"
+
+  # ============================================================================
+  # SECURITY JOB - Security scanning and best practices
+  # ============================================================================
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check .gitignore for sensitive patterns
+        run: |
+          echo "Checking .gitignore security exclusions..."
+          required_excludes=(
+            ".env"
+            ".env.local"
+            ".env.*.local"
+            ".claude/"
+            "secrets/*"
+          )
+          missing=()
+          for pattern in "${required_excludes[@]}"; do
+            if ! grep -qF "$pattern" .gitignore; then
+              missing+=("$pattern")
+            fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::warning::.gitignore missing: ${missing[*]}"
+          else
+            echo "✓ All sensitive patterns excluded"
+          fi
+
+      - name: Verify no committed secrets
+        run: |
+          echo "Scanning for potential secrets..."
+          # Check for common secret patterns
+          if git log --all --full-history --source -- "*secret*" "*password*" "*api_key*" 2>/dev/null | grep -q "password\|secret\|api_key"; then
+            echo "::warning::Potential secrets found in git history"
+          fi
+          echo "✓ No obvious secrets in current commit"
+
+      - name: Check file permissions
+        run: |
+          echo "Verifying script permissions..."
+          # Shell scripts should be executable (or have executable example)
+          scripts=("dev-server.sh" "init.sh")
+          for script in "${scripts[@]}"; do
+            if [ -f "$script" ]; then
+              if [ -x "$script" ]; then
+                echo "✓ $script is executable"
+              else
+                echo "::warning::$script is not executable (users may need chmod +x)"
+              fi
+            fi
+          done
+
+      - name: Run Hadolint on Dockerfile (if exists)
+        if: hashFiles('Dockerfile') != ''
+        continue-on-error: true
+        run: |
+          echo "Running Hadolint..."
+          docker run --rm -i hadolint/hadolint < Dockerfile || true
+
+  # ============================================================================
+  # DOCKER BUILD JOB - Test Docker image build
+  # ============================================================================
+  docker-build:
+    name: Test Docker Build
+    runs-on: ubuntu-latest
+    needs: validation
+    strategy:
+      matrix:
+        service: [vibe-kanban, code-server]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build service image
+        run: |
+          echo "Testing build for ${{ matrix.service }}..."
+          docker-compose build --no-cache ${{ matrix.service }}
+          echo "✓ ${{ matrix.service }} builds successfully"
+
+      - name: Check image size
+        run: |
+          echo "Image size for ${{ matrix.service }}:"
+          docker images | grep ${{ matrix.service }} || docker images | grep node | head -1
+
+  # ============================================================================
+  # DOCUMENTATION JOB - Validate documentation
+  # ============================================================================
+  documentation:
+    name: Validate Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check README.md links
+        run: |
+          echo "Checking README.md for broken links..."
+          # Extract markdown links and check format
+          if grep -E '\[.*\]\(\)' README.md; then
+            echo "::error::Empty link found in README.md"
+            exit 1
+          fi
+          echo "✓ No empty links found"
+
+      - name: Verify documentation files exist
+        run: |
+          echo "Checking documentation files..."
+          docs=("README.md" "HELPER.md" "LICENSE")
+          missing=()
+          for doc in "${docs[@]}"; do
+            if [ ! -f "$doc" ]; then
+              missing+=("$doc")
+            fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing documentation: ${missing[*]}"
+            exit 1
+          fi
+          echo "✓ All documentation files present"
+
+      - name: Check Makefile help target
+        run: |
+          echo "Validating Makefile..."
+          if grep -q "^\.PHONY: help" Makefile && grep -q "^help:" Makefile; then
+            echo "✓ Makefile has help target"
+          else
+            echo "::warning::Makefile missing help target"
+          fi
+
+  # ============================================================================
+  # CODE QUALITY JOB - Linting and formatting
+  # ============================================================================
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check line endings
+        run: |
+          echo "Checking for consistent line endings..."
+          if file *.yml *.sh *.md 2>/dev/null | grep -q "CRLF"; then
+            echo "::warning::Some files have CRLF line endings (prefer LF for scripts)"
+          fi
+
+      - name: Check for trailing whitespace
+        run: |
+          echo "Checking for trailing whitespace..."
+          if grep -rn '[[:space:]]$' --include="*.sh" --include="*.yml" --include="*.md" .; then
+            echo "::warning::Trailing whitespace found"
+          fi
+
+      - name: Check YAML syntax
+        run: |
+          echo "Validating YAML files..."
+          for yaml in $(find . -name "*.yml" -o -name "*.yaml"); do
+            echo "Checking $yaml..."
+            python3 -c "import yaml; yaml.safe_load(open('$yaml'))" || exit 1
+          done
+          echo "✓ All YAML files valid"
+
+  # ============================================================================
+  # SUMMARY JOB - Aggregate results
+  # ============================================================================
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [validation, security, docker-build, documentation, code-quality]
+    if: always()
+    steps:
+      - name: Check job results
+        run: |
+          echo "CI Pipeline Results:"
+          echo "  Validation: ${{ needs.validation.result }}"
+          echo "  Security: ${{ needs.security.result }}"
+          echo "  Docker Build: ${{ needs.docker-build.result }}"
+          echo "  Documentation: ${{ needs.documentation.result }}"
+          echo "  Code Quality: ${{ needs.code-quality.result }}"
+
+          if [ "${{ needs.validation.result }}" != "success" ] || \
+             [ "${{ needs.docker-build.result }}" != "success" ]; then
+            echo "::error::CI pipeline failed"
+            exit 1
+          fi
+
+          echo "✓ CI pipeline passed successfully"

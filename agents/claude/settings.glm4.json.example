@@ -1,0 +1,53 @@
+{
+  "_comment": "GLM-4 / Zhipu AI Configuration Template for Vibe Stack",
+  "_documentation": "https://open.bigmodel.cn/usercenter/apikeys",
+
+  "hasAcknowledgedDangerousSkipPermissions": true,
+  "hasCompletedOnboarding": true,
+  "theme": "dark",
+
+  "env": {
+    "_comment_api": "Get your API key from https://open.bigmodel.cn/usercenter/apikeys",
+    "ANTHROPIC_AUTH_TOKEN": "your-zhipu-ai-api-key-here",
+
+    "_comment_base_url": "Z.ai proxy endpoint for Anthropic API compatibility",
+    "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
+
+    "_comment_timeout": "Extended timeout for GLM-4 model inference",
+    "API_TIMEOUT_MS": "3000000",
+
+    "_comment_model_mapping": "GLM-4 model mapping to Claude model tiers",
+    "_haiku": "Fast, cost-effective model for quick tasks",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "glm-4-air",
+
+    "_sonnet": "Balanced model for general coding tasks",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "glm-4-flash",
+
+    "_opus": "Highest quality model for complex tasks",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "glm-4-plus"
+  },
+
+  "_model_reference": {
+    "glm-4-air": {
+      "description": "Fastest inference, suitable for simple tasks and quick responses",
+      "use_case": "Quick queries, simple code generation, brainstorming"
+    },
+    "glm-4-flash": {
+      "description": "Balanced performance and speed, ideal for most coding tasks",
+      "use_case": "General development, code refactoring, debugging"
+    },
+    "glm-4-plus": {
+      "description": "Highest quality output, best for complex problem-solving",
+      "use_case": "Architecture design, complex algorithms, critical debugging"
+    }
+  },
+
+  "_setup_instructions": {
+    "1": "Visit https://open.bigmodel.cn/usercenter/apikeys",
+    "2": "Create an account or login to Zhipu AI (BigModel)",
+    "3": "Generate an API key",
+    "4": "Replace 'your-zhipu-ai-api-key-here' with your actual key",
+    "5": "Copy this file to settings.json: cp settings.glm4.json.example settings.json",
+    "6": "Run: make up"
+  }
+}

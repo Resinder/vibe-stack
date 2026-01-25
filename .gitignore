@@ -1,7 +1,17 @@
-# Environment
-.env
+# ============================================================================
+# ENVIRONMENT & SECRETS
+# ============================================================================
 
-# Secrets - only keep structure and examples
+# Environment variables (contains sensitive data)
+.env
+.env.local
+.env.*.local
+
+# Claude Code runtime configuration (may contain API keys and session data)
+.claude/
+.claude.json
+
+# Project secrets - only keep structure and examples
 secrets/*
 !secrets/.gitkeep
 !secrets/your-project/
@@ -10,16 +20,58 @@ secrets/your-project/*
 !secrets/your-project/.gitkeep
 !secrets/your-project/example.env
 
-# Claude config - only keep template
+# Agent configuration - only keep templates
 agents/claude/*
-!agents/claude/settings.json.example
 !agents/claude/.gitkeep
+!agents/claude/settings.json.example
+!agents/claude/settings.glm4.json.example
 
-# System
+# ============================================================================
+# SYSTEM & TEMPORARY FILES
+# ============================================================================
+
 *.log
+*.log.*
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Node modules (may be present in repos/)
 node_modules/
+
+# ============================================================================
+# WORKSPACE
+# ============================================================================
 
 # Repos - keep folder structure only
 repos/*
 !repos/.gitkeep
+
+# ============================================================================
+# DOCKER & CONTAINER ARTIFACTS
+# ============================================================================
+
+# Docker volumes and data
+docker-compose.override.yml
+
+# Version tracking log
+.vibe-versions.log
+
+# ============================================================================
+# IDE & EDITOR CONFIGS
+# ============================================================================
+
+.vscode/
+.idea/
+*.sublime-*
+.history/
