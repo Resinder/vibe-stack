@@ -278,7 +278,7 @@ perform_dry_run() {
 verify_health() {
     log_section "Verifying Health Checks"
 
-    local services=("vibe-server:4000/api/health" "code-server:8443/health" "open-webui:3000/health")
+    local services=("vibe-server:4000/api/health" "code-server:8443/" "open-webui:8081/")
     local unhealthy_count=0
     local start_time
     start_time=$(date +%s)
