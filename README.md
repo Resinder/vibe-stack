@@ -20,7 +20,7 @@
 
 ```bash
 # 1. Clone and setup
-git clone https://github.com/halilbarim/vibe-stack.git
+git clone https://github.com/Resinder/vibe-stack.git
 cd vibe-stack
 ./init.sh
 
@@ -294,8 +294,8 @@ MIT License - see [LICENSE](LICENSE) file
 ## Support
 
 - **Documentation:** [docs/](docs/)
-- **Issues:** [GitHub Issues](https://github.com/halilbarim/vibe-stack/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/halilbarim/vibe-stack/discussions)
+- **Issues:** [GitHub Issues](https://github.com/Resinder/vibe-stack/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/Resinder/vibe-stack/discussions)
 
 ---
 

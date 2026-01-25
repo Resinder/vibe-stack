@@ -22,7 +22,7 @@ Complete guide to using Vibe Stack for AI-powered development.
 
 ```bash
 # Clone the repository
-git clone https://github.com/halilbarim/vibe-stack.git
+git clone https://github.com/Resinder/vibe-stack.git
 cd vibe-stack
 
 # Run setup (creates .env, installs dependencies)
@@ -408,7 +408,7 @@ make doctor
 2. **MCP Tools**: Run `make mcp-tools`
 3. **Diagnostics**: Run `make doctor`
 4. **Logs**: Run `make logs`
-5. **Issues**: [GitHub Issues](https://github.com/halilbarim/vibe-stack/issues)
+5. **Issues**: [GitHub Issues](https://github.com/Resinder/vibe-stack/issues)
 
 ---
 

@@ -620,7 +620,7 @@ make up
 
 - **[README.md](README.md)** - Main documentation
 - **[Makefile](Makefile)** - All available commands
-- **[GitHub Issues](https://github.com/halilbarim/vibe-stack/issues)** - Report bugs
+- **[GitHub Issues](https://github.com/Resinder/vibe-stack/issues)** - Report bugs
 - **[Docker Docs](https://docs.docker.com/)** - Docker documentation
 
 ---
