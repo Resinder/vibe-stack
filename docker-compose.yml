@@ -55,64 +55,11 @@ services:
       # Development server script
       - ./dev-server.sh:/usr/local/bin/dev-server.sh:ro
 
-    # Startup command with full environment setup
-    command: >
-      sh -c "
-        # ====================================================================
-        # STEP 1: Install base system dependencies
-        # ====================================================================
-        apt-get update && apt-get install -y git ssh nano curl sudo &&
+      # Docker entrypoint script
+      - ./scripts/docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh:ro
 
-        # ====================================================================
-        # STEP 2: Configure file permissions
-        # ====================================================================
-        chown -R node:node /repos /app /home/node &&
-
-        # ====================================================================
-        # STEP 3: Install Claude Code globally
-        # ====================================================================
-        echo '' &&
-        echo '========================================' &&
-        echo 'Installing Claude Code...' &&
-        echo '========================================' &&
-        npm install -g @anthropic-ai/claude-code &&
-        echo '' &&
-        echo 'Claude Code version check:' &&
-        claude --version &&
-        echo '' &&
-        echo 'Claude Code installed successfully!' &&
-        echo '========================================' &&
-        echo '' &&
-
-        # ====================================================================
-        # STEP 4: Configure Claude permissions
-        # ====================================================================
-        chown -R node:node /home/node/.claude &&
-
-        # ====================================================================
-        # STEP 5: Project configuration (copy secrets, not symlinks)
-        # ====================================================================
-        echo '--- Checking projects ---' &&
-        for d in /repos/* ; do
-          if [ -d \"\$$d\" ]; then
-            project_name=\$$(basename \"\$$d\")
-            if [ -d \"/root/secrets/\$$project_name\" ]; then
-              cp -f /root/secrets/\$$project_name/.env.development \"\$$d/.env.development.local\" 2>/dev/null || true
-              cp -f /root/secrets/\$$project_name/.env.production \"\$$d/.env.production.local\" 2>/dev/null || true
-              chown node:node \"\$$d/.env.development.local\" \"\$$d/.env.production.local\" 2>/dev/null || true
-            fi
-          fi
-        done &&
-
-        echo '--- Secrets stored in /root/secrets (inaccessible to agent) ---' &&
-
-        echo '--- System ready! Starting Vibe-Kanban... ---' &&
-
-        # ====================================================================
-        # STEP 6: Start Vibe-Kanban as node user
-        # ====================================================================
-        su - node -c 'HOME=/home/node npm_config_cache=/home/node/.npm PORT=4000 HOST=0.0.0.0 CLAUDE_SKIP_PERMISSION_CHECK=true DANGEROUS_SKIP_PERMISSION=true npx vibe-kanban'
-      "
+    # Use the entrypoint script for container setup
+    entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
 
     # Health check - verifies Vibe-Kanban is responding
     # Fast interval (15s) for quick detection of breaking changes

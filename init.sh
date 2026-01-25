@@ -21,50 +21,21 @@ set -euo pipefail
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SKIP_INTERACTIVE="${1:-}"
 
-# ANSI color codes
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly CYAN='\033[0;36m'
-readonly MAGENTA='\033[0;35m'
-readonly BOLD='\033[1m'
-readonly NC='\033[0m'  # No Color
+# Source common library
+source "${SCRIPT_DIR}/lib/common.sh"
 
 # ============================================================================
-# LOGGING FUNCTIONS
+# LOGGING FUNCTIONS (EXTENSIONS)
 # ============================================================================
 
-log_header() {
-    echo ""
-    echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
-    echo -e "${BOLD}${GREEN}  $1${NC}"
-    echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
-    echo ""
-}
-
-log_info() {
-    echo -e "${CYAN}ℹ ${*}${NC}"
-}
-
-log_success() {
-    echo -e "${GREEN}✓ ${*}${NC}"
-}
-
-log_warning() {
-    echo -e "${YELLOW}⚠ ${*}${NC}"
-}
-
-log_error() {
-    echo -e "${RED}❌ ${*}${NC}" >&2
-}
-
+# Custom step logging for setup process
 log_step() {
-    echo -e "${BLUE}▶ ${*}${NC}"
+    log_section "$1"
 }
 
+# Custom fix logging for self-healing
 log_fix() {
-    echo -e "${MAGENTA}🔧 FIX: ${*}${NC}"
+    log_recommendation "$1"
 }
 
 # ============================================================================

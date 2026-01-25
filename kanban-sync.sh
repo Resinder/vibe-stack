@@ -28,6 +28,9 @@ set -euo pipefail
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR" || exit 1
 
+# Source common library
+source "${SCRIPT_DIR}/lib/common.sh"
+
 # Parse arguments
 DRY_RUN=false
 VERBOSE=false
@@ -40,56 +43,21 @@ while [[ $# -gt 0 ]]; do
             ;;
         --verbose)
             VERBOSE=true
+            export VERBOSE=true  # Export for log_verbose in common.sh
             shift
             ;;
         *)
-            echo "Unknown option: $1"
+            log_error "Unknown option: $1"
             exit 1
             ;;
     esac
 done
-
-# ANSI color codes
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly CYAN='\033[0;36m'
-readonly MAGENTA='\033[0;35m'
-readonly BOLD='\033[1m'
-readonly NC='\033[0m'  # No Color
 
 # State files
 readonly STATE_FILE=".vibe-state.json"
 readonly VERSION_LOG=".vibe-versions.log"
 readonly KANBAN_STATE=".vibe-kanban-bridge.json"
 readonly IMMUNE_LOG_PATTERN="immune-response-*.log"
-
-# ============================================================================
-# LOGGING FUNCTIONS
-# ============================================================================
-
-log_info() {
-    echo -e "${CYAN}[KANBAN-BRIDGE]${NC} ${*}"
-}
-
-log_success() {
-    echo -e "${GREEN}[KANBAN-BRIDGE] ✓${NC} ${*}"
-}
-
-log_warning() {
-    echo -e "${YELLOW}[KANBAN-BRIDGE] ⚠${NC} ${*}"
-}
-
-log_error() {
-    echo -e "${RED}[KANBAN-BRIDGE] ✗${NC} ${*}"
-}
-
-log_verbose() {
-    if [[ "$VERBOSE" == "true" ]]; then
-        echo -e "${BLUE}[KANBAN-BRIDGE] [DEBUG]${NC} ${*}"
-    fi
-}
 
 # ============================================================================
 # KANBAN STATE MANAGEMENT
@@ -110,7 +78,7 @@ init_kanban_state() {
   "sync_count": 0
 }
 EOF
-        log_verbose "Initialized kanban state"
+        log_verbose "[KANBAN-BRIDGE] Initialized kanban state"
     fi
 }
 
@@ -120,12 +88,12 @@ EOF
 
 read_mission_state() {
     if [[ ! -f "$STATE_FILE" ]]; then
-        log_verbose "No mission state file found"
+        log_verbose "[KANBAN-BRIDGE] No mission state file found"
         return 1
     fi
 
-    if ! command -v jq >/dev/null 2>&1; then
-        log_warning "jq not found - cannot parse state file"
+    if ! command_exists jq; then
+        log_warning "[KANBAN-BRIDGE] jq not found - cannot parse state file"
         return 1
     fi
 
@@ -167,7 +135,7 @@ read_mission_state() {
     export MISSION_PERCENT="$percent_complete"
     export MISSION_INTERRUPTED="$interrupted"
 
-    log_verbose "Mission: $mission_title | Status: $mission_status | Interrupted: $interrupted"
+    log_verbose "[KANBAN-BRIDGE] Mission: $mission_title | Status: $mission_status | Interrupted: $interrupted"
     return 0
 }
 
@@ -177,7 +145,7 @@ read_mission_state() {
 
 analyze_git_activity() {
     if ! git rev-parse --git-dir >/dev/null 2>&1; then
-        log_verbose "Not in a git repository"
+        log_verbose "[KANBAN-BRIDGE] Not in a git repository"
         return 1
     fi
 
@@ -199,7 +167,7 @@ analyze_git_activity() {
     done <<< "$recent_commits"
 
     export GIT_COMPLETED_TASKS="${completed_tasks[*]:-}"
-    log_verbose "Found ${#completed_tasks[@]} completed tasks in git log"
+    log_verbose "[KANBAN-BRIDGE] Found ${#completed_tasks[@]} completed tasks in git log"
 }
 
 # ============================================================================
@@ -233,7 +201,7 @@ analyze_immune_responses() {
 
     export IMMUNE_ERRORS="${recent_errors[*]:-}"
     export IMMUNE_SUCCESSES="${recent_successes[*]:-}"
-    log_verbose "Immune errors: ${#recent_errors[@]} | Successes: ${#recent_successes[@]}"
+    log_verbose "[KANBAN-BRIDGE] Immune errors: ${#recent_errors[@]} | Successes: ${#recent_successes[@]}"
 }
 
 # ============================================================================
@@ -272,7 +240,7 @@ create_or_update_card() {
 
     mv "$tmp_state" "$KANBAN_STATE"
 
-    log_verbose "Added card '$title' to lane '$lane'"
+    log_verbose "[KANBAN-BRIDGE] Added card '$title' to lane '$lane'"
 }
 
 move_card_to_lane() {
@@ -294,7 +262,7 @@ move_card_to_lane() {
     # Add to destination lane
     create_or_update_card "$to_lane" "$title"
 
-    log_verbose "Moved '$title' from '$from_lane' to '$to_lane'"
+    log_verbose "[KANBAN-BRIDGE] Moved '$title' from '$from_lane' to '$to_lane'"
 }
 
 # ============================================================================
@@ -338,10 +306,10 @@ sync_mission_state() {
 
     # Update or create card for this mission
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "[DRY-RUN] Would move '$MISSION_TITLE' to '$target_lane' (badge: $badge)"
+        log_info "[KANBAN-BRIDGE] [DRY-RUN] Would move '$MISSION_TITLE' to '$target_lane' (badge: $badge)"
     else
         create_or_update_card "$target_lane" "$MISSION_TITLE" "$MISSION_STATUS" "$badge"
-        log_success "Synced mission: $MISSION_TITLE → $target_lane"
+        log_success "[KANBAN-BRIDGE] Synced mission: $MISSION_TITLE → $target_lane"
     fi
 }
 
@@ -358,10 +326,10 @@ sync_git_activity() {
                 task_title=$(echo "$task" | sed 's/^[0-9a-f]* //' | cut -d':' -f1)
 
                 if [[ "$DRY_RUN" == "true" ]]; then
-                    log_info "[DRY-RUN] Would complete task: $task_title"
+                    log_info "[KANBAN-BRIDGE] [DRY-RUN] Would complete task: $task_title"
                 else
                     move_card_to_lane "$task_title" "in_progress" "done"
-                    log_success "Completed task from git: $task_title"
+                    log_success "[KANBAN-BRIDGE] Completed task from git: $task_title"
                 fi
             fi
         done <<< "$GIT_COMPLETED_TASKS"
@@ -377,10 +345,10 @@ sync_immune_responses() {
             local card_title="Immune Response: $error"
 
             if [[ "$DRY_RUN" == "true" ]]; then
-                log_info "[DRY-RUN] Would log immune error: $error"
+                log_info "[KANBAN-BRIDGE] [DRY-RUN] Would log immune error: $error"
             else
                 create_or_update_card "recovery" "$card_title" "failed" "IMMUNE BLOCKED"
-                log_warning "Immune response logged: $error"
+                log_warning "[KANBAN-BRIDGE] Immune response logged: $error"
             fi
         done
     fi
@@ -431,7 +399,7 @@ generate_dashboard_data() {
             mission_percent: env.MISSION_PERCENT // null
         }' > "$dashboard_file"
 
-    log_verbose "Generated dashboard data: $dashboard_file"
+    log_verbose "[KANBAN-BRIDGE] Generated dashboard data: $dashboard_file"
 }
 
 # ============================================================================
@@ -439,7 +407,7 @@ generate_dashboard_data() {
 # ============================================================================
 
 perform_sync() {
-    log_info "Starting Kanban Bridge synchronization..."
+    log_info "[KANBAN-BRIDGE] Starting Kanban Bridge synchronization..."
 
     # Initialize state
     init_kanban_state
@@ -462,7 +430,7 @@ perform_sync() {
 
     mv "$tmp_state" "$KANBAN_STATE"
 
-    log_success "Synchronization complete"
+    log_success "[KANBAN-BRIDGE] Synchronization complete"
 
     # Show summary
     if [[ "$VERBOSE" == "true" ]] || [[ "$DRY_RUN" == "true" ]]; then
@@ -479,13 +447,13 @@ perform_sync() {
 
 trigger_after_update() {
     # This function is called by make update after successful completion
-    log_info "Auto-sync triggered after successful update"
+    log_info "[KANBAN-BRIDGE] Auto-sync triggered after successful update"
     perform_sync
 }
 
 trigger_after_test_harness() {
     # This function is called by test-harness.sh after successful completion
-    log_info "Auto-sync triggered after successful test-harness"
+    log_info "[KANBAN-BRIDGE] Auto-sync triggered after successful test-harness"
     perform_sync
 }
 
@@ -494,27 +462,23 @@ trigger_after_test_harness() {
 # ============================================================================
 
 main() {
-    echo ""
-    echo -e "${MAGENTA}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${MAGENTA}║  Vibe Stack - Kanban Bridge (Agent Sync)                  ║${NC}"
-    echo -e "${MAGENTA}╚════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
+    log_header "Kanban Bridge (Agent Sync)"
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_warning "DRY-RUN MODE: No changes will be made"
+        log_warning "[KANBAN-BRIDGE] DRY-RUN MODE: No changes will be made"
         echo ""
     fi
 
     perform_sync
 
     echo ""
-    log_info "Kanban state saved to: $KANBAN_STATE"
-    log_info "Dashboard data saved to: .vibe-dashboard.json"
+    log_info "[KANBAN-BRIDGE] Kanban state saved to: $KANBAN_STATE"
+    log_info "[KANBAN-BRIDGE] Dashboard data saved to: .vibe-dashboard.json"
     echo ""
 }
 
 # Handle script interruption
-trap 'echo ""; log_error "Sync interrupted"; exit 130' INT
+trap 'echo ""; log_error "[KANBAN-BRIDGE] Sync interrupted"; exit 130' INT
 
 # Run main function
 main "$@"

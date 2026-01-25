@@ -20,43 +20,12 @@ set -euo pipefail
 # CONFIGURATION
 # ============================================================================
 
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PORT="${DEV_PORT:-3000}"
 readonly HOST="${DEV_HOST:-0.0.0.0}"
 
-# ANSI color codes for output
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly CYAN='\033[0;36m'
-readonly NC='\033[0m'  # No Color
-
-# ============================================================================
-# LOGGING FUNCTIONS
-# ============================================================================
-
-log_info() {
-    echo -e "${CYAN}ℹ ${*}${NC}"
-}
-
-log_success() {
-    echo -e "${GREEN}✓ ${*}${NC}"
-}
-
-log_warning() {
-    echo -e "${YELLOW}⚠ ${*}${NC}"
-}
-
-log_error() {
-    echo -e "${RED}❌ ${*}${NC}" >&2
-}
-
-log_header() {
-    echo ""
-    echo -e "${BLUE}======================================${NC}"
-    echo -e "${GREEN}🚀 Lightweight Dev Server${NC}"
-    echo -e "${BLUE}======================================${NC}"
-}
+# Source common library
+source "${SCRIPT_DIR}/lib/common.sh"
 
 # ============================================================================
 # VALIDATION FUNCTIONS
@@ -158,7 +127,7 @@ start_server() {
     cd "$project_dir" || exit 1
 
     # Display startup banner
-    log_header
+    log_header "🚀 Dev Server"
     log_info "Project: ${project_name}"
     log_info "Path: ${project_dir}"
     log_info "Port: ${PORT}"

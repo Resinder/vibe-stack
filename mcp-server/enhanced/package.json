@@ -4,16 +4,37 @@
   "description": "Enhanced MCP Server for Vibe Stack with intelligent planning and real-time sync",
   "type": "module",
   "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./core/models.js": "./core/models.js",
+    "./services/boardService.js": "./services/boardService.js",
+    "./services/taskPlanningService.js": "./services/taskPlanningService.js",
+    "./controllers/taskController.js": "./controllers/taskController.js",
+    "./controllers/boardController.js": "./controllers/boardController.js",
+    "./controllers/planningController.js": "./controllers/planningController.js",
+    "./http/routes.js": "./http/routes.js",
+    "./config/constants.js": "./config/constants.js"
+  },
   "scripts": {
     "start": "node index.js",
-    "dev": "node --watch index.js"
+    "dev": "node --watch index.js",
+    "test": "echo \"No tests yet\"",
+    "lint": "echo \"ESLint not configured\""
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
-    "express": "^4.18.2",
-    "node-fetch": "^3.3.2"
+    "express": "^4.18.2"
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "keywords": [
+    "mcp",
+    "vibe-stack",
+    "kanban",
+    "task-management",
+    "ai-planning"
+  ],
+  "author": "Vibe Stack",
+  "license": "MIT"
 }
