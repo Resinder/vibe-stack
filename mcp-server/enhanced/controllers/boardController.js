@@ -2,10 +2,12 @@
  * ============================================================================
  * VIBE STACK - Board Controller
  * ============================================================================
- * Handles board-related MCP tool calls
+ * Handles board-related MCP tool calls with error handling
  * @version 2.0.0
  * ============================================================================
  */
+
+import { ErrorHandler } from '../middleware/errorHandler.js';
 
 /**
  * Board Controller - Board operations
@@ -38,10 +40,7 @@ export class BoardController {
         }]
       };
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: `Error: ${error.message}` }],
-        isError: true
-      };
+      return ErrorHandler.handle(error);
     }
   }
 
@@ -73,10 +72,7 @@ export class BoardController {
         }]
       };
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: `Error: ${error.message}` }],
-        isError: true
-      };
+      return ErrorHandler.handle(error);
     }
   }
 
@@ -108,10 +104,7 @@ export class BoardController {
         }]
       };
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: `Error: ${error.message}` }],
-        isError: true
-      };
+      return ErrorHandler.handle(error);
     }
   }
 

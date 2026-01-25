@@ -2,12 +2,14 @@
  * ============================================================================
  * VIBE STACK - Task Controller
  * ============================================================================
- * Handles task-related MCP tool calls
+ * Handles task-related MCP tool calls with validation and error handling
  * @version 2.0.0
  * ============================================================================
  */
 
 import { Task } from '../core/models.js';
+import { Validator } from '../middleware/validation.js';
+import { ErrorHandler, TaskNotFoundError, InvalidLaneError } from '../middleware/errorHandler.js';
 
 /**
  * Task Controller - Task-related operations
@@ -33,7 +35,11 @@ export class TaskController {
    */
   createTask(args) {
     try {
-      const task = new Task(args);
+      // Validate input
+      const validated = Validator.validateTaskData(args);
+
+      // Create task
+      const task = new Task(validated);
       this.#boardService.addTask(task);
 
       return {
@@ -47,10 +53,7 @@ export class TaskController {
         }]
       };
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: `Error: ${error.message}` }],
-        isError: true
-      };
+      return ErrorHandler.handle(error);
     }
   }
 
@@ -61,12 +64,11 @@ export class TaskController {
    */
   moveTask(args) {
     try {
-      const { taskId, targetLane } = args;
+      // Validate inputs
+      const taskId = Validator.validateTaskId(args.taskId);
+      const targetLane = Validator.validateLane(args.targetLane);
 
-      if (!taskId || !targetLane) {
-        throw new Error('taskId and targetLane are required');
-      }
-
+      // Move task
       const task = this.#boardService.moveTask(taskId, targetLane);
 
       return {
@@ -78,10 +80,7 @@ export class TaskController {
         }]
       };
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: `Error: ${error.message}` }],
-        isError: true
-      };
+      return ErrorHandler.handle(error);
     }
   }
 
@@ -92,26 +91,23 @@ export class TaskController {
    */
   updateTask(args) {
     try {
-      const { taskId, ...updates } = args;
+      // Validate inputs
+      const taskId = Validator.validateTaskId(args.taskId);
+      const { taskId: _, ...updates } = args;
+      const validated = Validator.validateTaskUpdate(updates);
 
-      if (!taskId) {
-        throw new Error('taskId is required');
-      }
-
-      const task = this.#boardService.updateTask(taskId, updates);
+      // Update task
+      const task = this.#boardService.updateTask(taskId, validated);
 
       return {
         content: [{
           type: 'text',
           text: `✓ Task updated: ${task.title}\n` +
-                `  Changes: ${Object.keys(updates).join(', ')}`
+                `  Changes: ${Object.keys(validated).join(', ')}`
         }]
       };
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: `Error: ${error.message}` }],
-        isError: true
-      };
+      return ErrorHandler.handle(error);
     }
   }
 
@@ -122,12 +118,11 @@ export class TaskController {
    */
   searchTasks(args) {
     try {
-      const { query, lane } = args;
+      // Validate inputs
+      const query = Validator.validateQuery(args.query);
+      const lane = args.lane ? Validator.validateLane(args.lane) : null;
 
-      if (!query) {
-        throw new Error('query is required');
-      }
-
+      // Search
       const results = this.#boardService.searchTasks(query, lane);
 
       return {
@@ -137,10 +132,7 @@ export class TaskController {
         }]
       };
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: `Error: ${error.message}` }],
-        isError: true
-      };
+      return ErrorHandler.handle(error);
     }
   }
 
@@ -151,15 +143,12 @@ export class TaskController {
    */
   batchCreate(args) {
     try {
-      const { tasks } = args;
+      // Validate inputs
+      const validatedTasks = Validator.validateBatchTasks(args.tasks);
 
-      if (!Array.isArray(tasks)) {
-        throw new Error('tasks must be an array');
-      }
-
+      // Create tasks
       const created = [];
-
-      for (const taskData of tasks) {
+      for (const taskData of validatedTasks) {
         const task = new Task(taskData);
         this.#boardService.addTask(task);
         created.push(task);
@@ -173,10 +162,7 @@ export class TaskController {
         }]
       };
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: `Error: ${error.message}` }],
-        isError: true
-      };
+      return ErrorHandler.handle(error);
     }
   }
 }

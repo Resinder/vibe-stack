@@ -13,13 +13,17 @@
     "./controllers/boardController.js": "./controllers/boardController.js",
     "./controllers/planningController.js": "./controllers/planningController.js",
     "./http/routes.js": "./http/routes.js",
+    "./middleware/validation.js": "./middleware/validation.js",
+    "./middleware/errorHandler.js": "./middleware/errorHandler.js",
     "./config/constants.js": "./config/constants.js"
   },
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "echo \"No tests yet\"",
-    "lint": "echo \"ESLint not configured\""
+    "test": "node --test tests/test.js",
+    "test:verbose": "node --test --verbose tests/test.js",
+    "lint": "eslint . --ext .js --ignore-pattern .test-data/",
+    "lint:fix": "eslint . --ext .js --fix --ignore-pattern .test-data/"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",

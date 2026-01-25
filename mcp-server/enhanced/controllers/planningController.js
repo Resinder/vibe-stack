@@ -2,10 +2,13 @@
  * ============================================================================
  * VIBE STACK - Planning Controller
  * ============================================================================
- * Handles planning-related MCP tool calls
+ * Handles planning-related MCP tool calls with validation and error handling
  * @version 2.0.0
  * ============================================================================
  */
+
+import { Validator } from '../middleware/validation.js';
+import { ErrorHandler, PlanningError } from '../middleware/errorHandler.js';
 
 /**
  * Planning Controller - Planning operations
@@ -36,14 +39,15 @@ export class PlanningController {
    */
   generatePlan(args) {
     try {
-      const { goal, context = '', targetLane = 'backlog' } = args;
+      // Validate inputs
+      const goal = Validator.validateGoal(args.goal);
+      const context = Validator.validateContext(args.context);
+      const targetLane = args.targetLane ? Validator.validateLane(args.targetLane) : 'backlog';
 
-      if (!goal) {
-        throw new Error('goal is required');
-      }
-
+      // Generate plan
       const tasks = this.#planningService.generatePlan(goal, context);
 
+      // Add tasks to board
       const created = [];
       for (const task of tasks) {
         task.lane = targetLane;
@@ -71,10 +75,7 @@ export class PlanningController {
         }]
       };
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: `Error: ${error.message}` }],
-        isError: true
-      };
+      return ErrorHandler.handle(error);
     }
   }
 
@@ -85,11 +86,8 @@ export class PlanningController {
    */
   analyzeGoal(args) {
     try {
-      const { goal } = args;
-
-      if (!goal) {
-        throw new Error('goal is required');
-      }
+      // Validate input
+      const goal = Validator.validateGoal(args.goal);
 
       const patterns = this.#planningService.analyzeGoal(goal);
 
@@ -105,10 +103,7 @@ export class PlanningController {
         }]
       };
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: `Error: ${error.message}` }],
-        isError: true
-      };
+      return ErrorHandler.handle(error);
     }
   }
 }

@@ -238,9 +238,25 @@ export class Board {
  * @extends Error
  */
 export class ValidationError extends Error {
-  constructor(message, field, value) {
+  /** @type {string} Field that failed validation */
+  field;
+
+  /** @type {*} Invalid value */
+  value;
+
+  /** @type {string} Error code */
+  code;
+
+  /**
+   * Create a ValidationError
+   * @param {string} message - Error message
+   * @param {string} [field] - Field that failed validation
+   * @param {*} [value] - Invalid value
+   */
+  constructor(message, field = null, value = null) {
     super(message);
     this.name = 'ValidationError';
+    this.code = 'VALIDATION_ERROR';
     this.field = field;
     this.value = value;
   }
