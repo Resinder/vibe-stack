@@ -35,10 +35,8 @@ readonly NC='\033[0m'  # No Color
 # LOGGING FUNCTIONS
 # ============================================================================
 
-/**
- * Print a formatted header banner
- * @param {string} title - Header title
- */
+# Print a formatted header banner
+# Args: title - Header title
 log_header() {
     echo ""
     echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
@@ -47,60 +45,46 @@ log_header() {
     echo ""
 }
 
-/**
- * Print a section header
- * @param {string} title - Section title
- */
+# Print a section header
+# Args: title - Section title
 log_section() {
     echo ""
     echo -e "${CYAN}▶ $1${NC}"
 }
 
-/**
- * Print an informational message
- * @param {string} message - Info message
- */
+# Print an informational message
+# Args: message - Info message
 log_info() {
     echo -e "${CYAN}  ℹ ${*}${NC}"
 }
 
-/**
- * Print a success message
- * @param {string} message - Success message
- */
+# Print a success message
+# Args: message - Success message
 log_success() {
     echo -e "${GREEN}  ✓ ${*}${NC}"
 }
 
-/**
- * Print a warning message
- * @param {string} message - Warning message
- */
+# Print a warning message
+# Args: message - Warning message
 log_warning() {
     echo -e "${YELLOW}  ⚠ ${*}${NC}"
 }
 
-/**
- * Print an error message to stderr
- * @param {string} message - Error message
- */
+# Print an error message to stderr
+# Args: message - Error message
 log_error() {
     echo -e "${RED}  ✗ ${*}${NC}" >&2
 }
 
-/**
- * Print a recommendation/tip
- * @param {string} message - Recommendation message
- */
+# Print a recommendation/tip
+# Args: message - Recommendation message
 log_recommendation() {
     echo ""
     echo -e "${MAGENTA}  💡 RECOMMENDATION: ${*}${NC}"
 }
 
-/**
- * Print a debug message (only if VERBOSE is true)
- * @param {string} message - Debug message
- */
+# Print a debug message (only if VERBOSE is true)
+# Args: message - Debug message
 log_verbose() {
     if [[ "${VERBOSE:-false}" == "true" ]]; then
         echo -e "${BLUE}  [DEBUG] ${*}${NC}"
@@ -111,20 +95,16 @@ log_verbose() {
 # VALIDATION FUNCTIONS
 # ============================================================================
 
-/**
- * Check if a command exists
- * @param {string} cmd - Command to check
- * @returns {boolean} True if command exists
- */
+# Check if a command exists
+# Args: cmd - Command to check
+# Returns: 0 if command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-/**
- * Validate a port is available
- * @param {number} port - Port number to check
- * @returns {boolean} True if port is available
- */
+# Validate a port is available
+# Args: port - Port number to check
+# Returns: 0 if port is available
 is_port_available() {
     local port="$1"
 
@@ -139,11 +119,9 @@ is_port_available() {
     fi
 }
 
-/**
- * Get process using a port
- * @param {number} port - Port number
- * @returns {string} Process info or empty string
- */
+# Get process using a port
+# Args: port - Port number
+# Returns: Process info or empty string
 get_port_process() {
     local port="$1"
 
@@ -160,10 +138,8 @@ get_port_process() {
 # DOCKER UTILITY FUNCTIONS
 # ============================================================================
 
-/**
- * Detect Docker Compose command (v1 or v2)
- * @returns {string} Docker Compose command to use
- */
+# Detect Docker Compose command (v1 or v2)
+# Returns: Docker Compose command to use
 detect_docker_compose() {
     if command_exists docker-compose; then
         echo "docker-compose"
@@ -174,19 +150,15 @@ detect_docker_compose() {
     fi
 }
 
-/**
- * Check if Docker daemon is running
- * @returns {boolean} True if Docker is running
- */
+# Check if Docker daemon is running
+# Returns: 0 if Docker is running
 is_docker_running() {
     docker info >/dev/null 2>&1
 }
 
-/**
- * Get container health status
- * @param {string} container - Container name
- * @returns {string} Health status (healthy, unhealthy, starting, or none)
- */
+# Get container health status
+# Args: container - Container name
+# Returns: Health status (healthy, unhealthy, starting, or none)
 get_container_health() {
     local container="$1"
 
@@ -197,11 +169,9 @@ get_container_health() {
     fi
 }
 
-/**
- * Check if container is healthy
- * @param {string} container - Container name
- * @returns {boolean} True if container is healthy
- */
+# Check if container is healthy
+# Args: container - Container name
+# Returns: 0 if container is healthy
 is_container_healthy() {
     [[ "$(get_container_health "$1")" == "healthy" ]]
 }
@@ -210,21 +180,17 @@ is_container_healthy() {
 # ERROR HANDLING
 # ============================================================================
 
-/**
- * Exit with error message
- * @param {string} message - Error message
- * @param {number} code - Exit code (default: 1)
- */
+# Exit with error message
+# Args: message - Error message
+#       code    - Exit code (default: 1)
 die() {
     log_error "$1"
     exit "${2:-1}"
 }
 
-/**
- * Print error and return failure
- * @param {string} message - Error message
- * @returns {number} Exit code 1
- */
+# Print error and return failure
+# Args: message - Error message
+# Returns: Exit code 1
 fail() {
     log_error "$1"
     return 1
@@ -234,12 +200,10 @@ fail() {
 # USER INTERACTION
 # ============================================================================
 
-/**
- * Prompt user for yes/no confirmation
- * @param {string} prompt - Prompt message
- * @param {string} default - Default answer (Y or N)
- * @returns {boolean} True if user answered yes
- */
+# Prompt user for yes/no confirmation
+# Args: prompt  - Prompt message
+#       default - Default answer (Y or N)
+# Returns: 0 if user answered yes
 confirm() {
     local prompt="$1"
     local default="${2:-N}"
@@ -264,11 +228,9 @@ confirm() {
 # STRING UTILITIES
 # ============================================================================
 
-/**
- * Trim whitespace from string
- * @param {string} str - Input string
- * @returns {string} Trimmed string
- */
+# Trim whitespace from string
+# Args: str - Input string
+# Returns: Trimmed string
 trim() {
     local str="$1"
     str="${str#"${str%%[![:space:]]*}"}"   # Trim leading
@@ -276,11 +238,9 @@ trim() {
     echo "$str"
 }
 
-/**
- * Check if string is empty or whitespace
- * @param {string} str - Input string
- * @returns {boolean} True if empty
- */
+# Check if string is empty or whitespace
+# Args: str - Input string
+# Returns: 0 if empty
 is_empty() {
     [[ -z "$(trim "$1")" ]]
 }
@@ -289,18 +249,14 @@ is_empty() {
 # FILE/DIRECTORY UTILITIES
 # ============================================================================
 
-/**
- * Get script directory (works with sourced scripts)
- * @returns {string} Absolute path to script directory
- */
+# Get script directory (works with sourced scripts)
+# Returns: Absolute path to script directory
 get_script_dir() {
     cd "$(dirname "${BASH_SOURCE[1]}")" && pwd
 }
 
-/**
- * Ensure directory exists, create if not
- * @param {string} dir - Directory path
- */
+# Ensure directory exists, create if not
+# Args: dir - Directory path
 ensure_dir() {
     local dir="$1"
     if [[ ! -d "$dir" ]]; then
