@@ -260,6 +260,62 @@ services:
       code-server:
         condition: service_healthy
 
+  # ============================================================================
+  # MCP SERVER (Open WebUI Integration)
+  # ============================================================================
+  mcp-server:
+    # Model Context Protocol server for Vibe Stack integration with Open WebUI
+    # Provides tools for task management, planning, and board operations
+    image: node:20-alpine
+    container_name: vibe-mcp-server
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+
+    # Network ports
+    ports:
+      - "4001:4001"  # HTTP Proxy API
+
+    # Environment variables
+    environment:
+      - VIBE_KANBAN_URL=http://vibe-server:4000
+      - HTTP_PORT=4001
+      - NODE_ENV=production
+
+    # Volume mounts
+    volumes:
+      # Mount source for hot-reload in development
+      - ./mcp-server:/app
+      # Mount bridge file for board state
+      - ./.vibe-kanban-bridge.json:/data/.vibe-kanban-bridge.json:ro
+      - /app/node_modules
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Resource constraints
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Dependencies
+    depends_on:
+      vibe-kanban:
+        condition: service_healthy
+
 # ============================================================================
 # PERSISTENT VOLUMES
 # ============================================================================

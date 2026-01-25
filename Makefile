@@ -81,6 +81,12 @@ help: ## Show this help message
 	@echo "  $(YELLOW)make kanban-sync$(NC)  Sync system state with Kanban board"
 	@echo "  $(YELLOW)make observer$(NC)     Open Observer Dashboard"
 	@echo ""
+	@echo "$(CYAN)AI Integration (Open WebUI + MCP):$(NC)"
+	@echo "  $(YELLOW)make mcp-test$(NC)     Test MCP server connection"
+	@echo "  $(YELLOW)make mcp-tools$(NC)    List available MCP tools"
+	@echo "  $(YELLOW)make mcp-plan$(NC)     Generate task plan via AI"
+	@echo "  $(YELLOW)make webui$(NC)        Open Open WebUI in browser"
+	@echo ""
 	@echo "$(CYAN)Mission State:$(NC)"
 	@echo "  $(YELLOW)make state-show$(NC)   Show current mission state"
 	@echo "  $(YELLOW)make state-clear$(NC)  Clear mission state"
@@ -633,6 +639,42 @@ webui: ## Open Open WebUI in default browser
 	@command -v xdg-open >/dev/null 2>&1 && xdg-open http://localhost:8081 || \
 	 command -v open >/dev/null 2>&1 && open http://localhost:8081 || \
 	 echo "$(YELLOW)Please open manually:$(NC)\n  http://localhost:8081"
+
+# ============================================================================
+# MCP SERVER TARGETS
+# ============================================================================
+.PHONY: mcp-test
+mcp-test: ## Test MCP server connection
+	@echo "$(CYAN)Testing MCP Server...$(NC)"
+	@curl -sf http://localhost:4001/health >/dev/null 2>&1 && \
+		echo "  $(GREEN)✓$(NC) MCP Server is running" || \
+		echo "  $(YELLOW)⚠$(NC) MCP Server not reachable (start with 'make up')"
+	@echo ""
+	@curl -sf http://localhost:4001/.well-known/mcp 2>/dev/null | head -20 || echo "  $(RED)✗$(NC) Failed to get MCP info"
+
+.PHONY: mcp-tools
+mcp-tools: ## List available MCP tools
+	@echo "$(CYAN)Available MCP Tools:$(NC)"
+	@echo ""
+	@curl -sf http://localhost:4001/.well-known/mcp 2>/dev/null | \
+		grep -E '"name"|"description"' | \
+		sed 's/,$$//' | \
+		paste - - | \
+		awk -F'"' '{print "  " $$4 ": " $$8}' || \
+		echo "  $(YELLOW)⚠$(NC) MCP Server not reachable"
+	@echo ""
+
+.PHONY: mcp-plan
+mcp-plan: ## Generate task plan via AI (example)
+	@echo "$(CYAN)Generating example task plan...$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Goal:$(NC) Add user authentication with OAuth"
+	@echo ""
+	@curl -sf -X POST http://localhost:4001/api/tools/vibe_generate_plan \
+		-H "Content-Type: application/json" \
+		-d '{"goal": "Add user authentication with OAuth", "targetLane": "backlog"}' \
+		2>/dev/null || echo "  $(YELLOW)⚠$(NC) MCP Server not reachable"
+	@echo ""
 
 # ============================================================================
 # VARIABLES EXPORT
