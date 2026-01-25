@@ -34,78 +34,236 @@ import { resolve } from 'path';
 // ============================================================================
 
 /**
- * Task domain model
+ * Task domain model with validation
+ * @class Task
+ * @description Represents a single task in the Kanban board with full validation
  */
 class Task {
+  /** @type {string} Unique task identifier */
+  id;
+
+  /** @type {string} Task title (required) */
+  title;
+
+  /** @type {string} Detailed description */
+  description;
+
+  /** @type {'backlog'|'todo'|'in_progress'|'done'|'recovery'} Current lane */
+  lane;
+
+  /** @type {'low'|'medium'|'high'|'critical'} Task priority */
+  priority;
+
+  /** @type {string} Task status */
+  status;
+
+  /** @type {string[]} Associated tags */
+  tags;
+
+  /** @type {string|null} Assigned user */
+  assignee;
+
+  /** @type {number|null} Estimated hours */
+  estimatedHours;
+
+  /** @type {string} ISO timestamp of creation */
+  createdAt;
+
+  /** @type {string} ISO timestamp of last update */
+  updatedAt;
+
+  /** @type {Object} Additional metadata */
+  metadata;
+
+  /** @type {string[]} Valid lane values */
+  static VALID_LANES = ['backlog', 'todo', 'in_progress', 'done', 'recovery'];
+
+  /** @type {string[]} Valid priority values */
+  static VALID_PRIORITIES = ['low', 'medium', 'high', 'critical'];
+
+  /**
+   * Create a new Task instance with validation
+   * @param {Object} data - Task data
+   * @param {string} [data.id] - Optional task ID (auto-generated if not provided)
+   * @param {string} [data.title] - Task title
+   * @param {string} [data.description] - Task description
+   * @param {string} [data.lane='backlog'] - Task lane
+   * @param {string} [data.priority='medium'] - Task priority
+   * @param {string} [data.status='pending'] - Task status
+   * @param {string[]} [data.tags=[]] - Task tags
+   * @param {string|null} [data.assignee=null] - Task assignee
+   * @param {number|null} [data.estimatedHours=null] - Time estimate
+   * @param {Object} [data.metadata={}] - Additional metadata
+   * @throws {Error} If validation fails
+   */
   constructor(data = {}) {
-    this.id = data.id || this.generateId();
+    // Validate required fields
+    if (data.title && typeof data.title !== 'string') {
+      throw new Error('Task title must be a string');
+    }
+
+    // Validate lane
+    const lane = data.lane || 'backlog';
+    if (!Task.VALID_LANES.includes(lane)) {
+      throw new Error(`Invalid lane: ${lane}. Must be one of: ${Task.VALID_LANES.join(', ')}`);
+    }
+
+    // Validate priority
+    const priority = data.priority || 'medium';
+    if (!Task.VALID_PRIORITIES.includes(priority)) {
+      throw new Error(`Invalid priority: ${priority}. Must be one of: ${Task.VALID_PRIORITIES.join(', ')}`);
+    }
+
+    // Validate estimatedHours
+    if (data.estimatedHours !== undefined && data.estimatedHours !== null) {
+      if (typeof data.estimatedHours !== 'number' || data.estimatedHours < 0) {
+        throw new Error('estimatedHours must be a non-negative number');
+      }
+    }
+
+    // Validate tags
+    const tags = Array.isArray(data.tags) ? data.tags : [];
+    if (!tags.every(t => typeof t === 'string')) {
+      throw new Error('All tags must be strings');
+    }
+
+    // Assign validated properties
+    this.id = data.id || this._generateId();
     this.title = data.title || '';
     this.description = data.description || '';
-    this.lane = data.lane || 'backlog';
-    this.priority = data.priority || 'medium';
+    this.lane = lane;
+    this.priority = priority;
     this.status = data.status || 'pending';
-    this.tags = data.tags || [];
+    this.tags = tags;
     this.assignee = data.assignee || null;
     this.estimatedHours = data.estimatedHours || null;
     this.createdAt = data.createdAt || new Date().toISOString();
     this.updatedAt = data.updatedAt || new Date().toISOString();
-    this.metadata = data.metadata || {};
+    this.metadata = typeof data.metadata === 'object' && data.metadata !== null ? data.metadata : {};
   }
 
-  generateId() {
-    return `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  /**
+   * Generate a unique task ID
+   * @private
+   * @returns {string} Unique identifier
+   */
+  _generateId() {
+    return `task-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   }
 
+  /**
+   * Convert task to plain object
+   * @returns {Object} Plain object representation
+   */
   toJSON() {
     return { ...this };
   }
 
+  /**
+   * Create Task from plain object
+   * @static
+   * @param {Object} data - Plain object data
+   * @returns {Task} New Task instance
+   */
   static fromJSON(data) {
     return new Task(data);
   }
 }
 
 /**
- * Board domain model
+ * Board domain model with validation
+ * @class Board
+ * @description Represents the Kanban board with all lanes and metadata
  */
 class Board {
+  /** @type {Object} Lane-based task storage */
+  lanes;
+
+  /** @type {Object} Board metadata */
+  metadata;
+
+  /** @type {string[]} Valid lane names */
+  static VALID_LANES = ['backlog', 'todo', 'in_progress', 'done', 'recovery'];
+
+  /**
+   * Create a new Board instance
+   * @param {Object} [data={}] - Board data
+   * @param {Object} [data.lanes] - Lane configuration
+   * @param {Object} [data.metadata] - Metadata object
+   */
   constructor(data = {}) {
-    this.lanes = data.lanes || {
-      backlog: [],
-      todo: [],
-      in_progress: [],
-      done: [],
-      recovery: []
-    };
-    this.metadata = data.metadata || {
-      lastSync: new Date().toISOString(),
-      version: '2.0.0'
+    // Validate lanes structure
+    const inputLanes = data.lanes || {};
+    this.lanes = {};
+
+    for (const lane of Board.VALID_LANES) {
+      if (inputLanes[lane]) {
+        if (!Array.isArray(inputLanes[lane])) {
+          throw new Error(`Lane '${lane}' must be an array`);
+        }
+        this.lanes[lane] = inputLanes[lane];
+      } else {
+        this.lanes[lane] = [];
+      }
+    }
+
+    // Set metadata with defaults
+    const inputMetadata = data.metadata || {};
+    this.metadata = {
+      lastSync: inputMetadata.lastSync || new Date().toISOString(),
+      version: inputMetadata.version || '2.0.0',
+      ...inputMetadata
     };
   }
 
+  /**
+   * Add a task to the board
+   * @param {Task} task - Task to add
+   * @throws {Error} If lane is invalid
+   */
   addTask(task) {
     if (!this.lanes[task.lane]) {
-      throw new Error(`Invalid lane: ${task.lane}`);
+      throw new Error(`Invalid lane: ${task.lane}. Must be one of: ${Board.VALID_LANES.join(', ')}`);
     }
     this.lanes[task.lane].push(task.toJSON());
     this.metadata.lastSync = new Date().toISOString();
   }
 
+  /**
+   * Get all tasks in a specific lane
+   * @param {string} lane - Lane name
+   * @returns {Array} Tasks in the lane
+   */
   getTasksByLane(lane) {
     return this.lanes[lane] || [];
   }
 
+  /**
+   * Get all tasks across all lanes
+   * @returns {Array} All tasks
+   */
   getAllTasks() {
     return Object.values(this.lanes).flat();
   }
 
+  /**
+   * Convert board to plain object
+   * @returns {Object} Plain object representation
+   */
   toJSON() {
     return {
       lanes: this.lanes,
-      ...this.metadata
+      lastSync: this.metadata.lastSync,
+      version: this.metadata.version
     };
   }
 
+  /**
+   * Create Board from plain object
+   * @static
+   * @param {Object} data - Plain object data
+   * @returns {Board} New Board instance
+   */
   static fromJSON(data) {
     return new Board(data);
   }
@@ -116,13 +274,26 @@ class Board {
 // ============================================================================
 
 /**
- * Task Planning Service - Intelligent task breakdown
+ * Task Planning Service - Intelligent task breakdown with pattern detection
+ * @class TaskPlanningService
+ * @description Analyzes goals and generates task plans based on detected patterns
  */
 class TaskPlanningService {
+  /** @type {Object} Pattern definitions for task generation */
+  patterns;
+
+  /**
+   * Create a new TaskPlanningService
+   */
   constructor() {
     this.patterns = this.loadPatterns();
   }
 
+  /**
+   * Load predefined patterns for task generation
+   * @private
+   * @returns {Object} Pattern definitions
+   */
   loadPatterns() {
     return {
       authentication: {
@@ -208,6 +379,11 @@ class TaskPlanningService {
     };
   }
 
+  /**
+   * Analyze a goal to detect matching patterns
+   * @param {string} goal - The goal to analyze
+   * @returns {Array} Array of detected patterns with names and task templates
+   */
   analyzeGoal(goal) {
     const goalLower = goal.toLowerCase();
     const detectedPatterns = [];

@@ -24,7 +24,16 @@ MAGENTA:= \033[0;35m
 NC    := \033[0m # No Color
 
 # Docker Compose command (use docker-compose v2 or fallback to v1)
+# Priority: docker-compose (v1) > docker compose (v2)
 DOCKER_COMPOSE := $(shell command -v docker-compose 2>/dev/null || echo "docker compose")
+
+# Verify Docker Compose is available
+ifeq ($(words $(DOCKER_COMPOSE)), 0)
+$(error Docker Compose not found. Please install Docker Compose v1 or v2)
+endif
+
+# Docker Compose version (for diagnostics)
+DOCKER_COMPOSE_VERSION := $(shell $(DOCKER_COMPOSE) version --short 2>/dev/null || echo "unknown")
 
 # Version tracking file
 VERSION_LOG := .vibe-versions.log
@@ -101,6 +110,12 @@ help: ## Show this help message
 	@echo "$(CYAN)Development:$(NC)"
 	@echo "  $(YELLOW)make build$(NC)        Rebuild containers (no cache)"
 	@echo "  $(YELLOW)make dev$(NC)          Start with visible logs"
+	@echo ""
+	@echo "$(CYAN)Code Quality:$(NC)"
+	@echo "  $(YELLOW)make lint$(NC)         Run shell script linting (shellcheck)"
+	@echo "  $(YELLOW)make lint-docker$(NC)  Validate docker-compose.yml"
+	@echo "  $(YELLOW)make check-scripts$(NC) Check shell script syntax"
+	@echo "  $(YELLOW)make code-quality$(NC) Run all code quality checks"
 	@echo ""
 	@echo "$(CYAN)Utilities:$(NC)"
 	@echo "  $(YELLOW)make health$(NC)       Check service health"
@@ -538,6 +553,66 @@ build: ## Rebuild containers without cache
 .PHONY: dev
 dev: ## Start services with visible logs
 	@$(DOCKER_COMPOSE) up
+
+# ============================================================================
+# CODE QUALITY TARGETS
+# ============================================================================
+.PHONY: lint
+lint: ## Run shell script linting (shellcheck)
+	@echo "$(CYAN)Running shell script quality checks...$(NC)"
+	@echo ""
+	@if command -v shellcheck >/dev/null 2>&1; then \
+		for script in *.sh lib/*.sh; do \
+			if [ -f "$$script" ]; then \
+				echo "  Checking $$script..."; \
+				shellcheck "$$script" || echo "  $(YELLOW)Issues found in $$script$(NC)"; \
+			fi; \
+		done; \
+		echo ""; \
+		echo "$(GREEN)✓ Shell script linting complete$(NC)"; \
+	else \
+		echo "$(YELLOW)⚠ shellcheck not installed. Install with:$(NC)"; \
+		echo "  $(MAGENTA)apt-get install shellcheck$(NC)  # Debian/Ubuntu"; \
+		echo "  $(MAGENTA)brew install shellcheck$(NC)      # macOS"; \
+	fi
+
+.PHONY: lint-docker
+lint-docker: ## Validate docker-compose.yml syntax
+	@echo "$(CYAN)Validating docker-compose.yml...$(NC)"
+	@$(DOCKER_COMPOSE) config --no-interpolate >/dev/null 2>&1 && \
+		echo "$(GREEN)✓ docker-compose.yml syntax is valid$(NC)" || \
+		echo "$(RED)✗ docker-compose.yml has syntax errors$(NC)"
+
+.PHONY: check-scripts
+check-scripts: ## Check all shell scripts for syntax errors
+	@echo "$(CYAN)Checking shell script syntax...$(NC)"
+	@echo ""
+	@failed=0; \
+	for script in *.sh lib/*.sh; do \
+		if [ -f "$$script" ]; then \
+			if bash -n "$$script" 2>/dev/null; then \
+				echo "  $(GREEN)✓$(NC) $$script"; \
+			else \
+				echo "  $(RED)✗$(NC) $$script (syntax error)"; \
+				failed=1; \
+			fi; \
+		fi; \
+	done; \
+	echo ""; \
+	if [ $$failed -eq 0 ]; then \
+		echo "$(GREEN)✓ All shell scripts have valid syntax$(NC)"; \
+	else \
+		echo "$(RED)✗ Some scripts have syntax errors$(NC)"; \
+		exit 1; \
+	fi
+
+.PHONY: code-quality
+code-quality: lint lint-docker check-scripts ## Run all code quality checks
+	@echo ""
+	@echo "$(GREEN)╔════════════════════════════════════════════════════════════╗$(NC)"
+	@echo "$(GREEN)║  Code Quality Checks Complete                                ║$(NC)"
+	@echo "$(GREEN)╚════════════════════════════════════════════════════════════╝$(NC)"
+	@echo ""
 
 # ============================================================================
 # UTILITY TARGETS
