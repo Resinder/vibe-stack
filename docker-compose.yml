@@ -264,12 +264,12 @@ services:
   # MCP SERVER (Open WebUI Integration)
   # ============================================================================
   mcp-server:
-    # Model Context Protocol server for Vibe Stack integration with Open WebUI
-    # Provides tools for task management, planning, and board operations
+    # Enhanced Model Context Protocol server for Vibe Stack integration
+    # Features: intelligent planning, real-time sync, webhook support
     image: node:20-alpine
     container_name: vibe-mcp-server
     build:
-      context: ./mcp-server
+      context: ./mcp-server/enhanced
       dockerfile: Dockerfile
 
     # Network ports
@@ -278,16 +278,18 @@ services:
 
     # Environment variables
     environment:
-      - VIBE_KANBAN_URL=http://vibe-server:4000
+      - BRIDGE_FILE=/data/.vibe-kanban-bridge.json
       - HTTP_PORT=4001
       - NODE_ENV=production
 
     # Volume mounts
     volumes:
       # Mount source for hot-reload in development
-      - ./mcp-server:/app
-      # Mount bridge file for board state
-      - ./.vibe-kanban-bridge.json:/data/.vibe-kanban-bridge.json:ro
+      - ./mcp-server/enhanced:/app
+      # Mount bridge file for board state (read-write for updates)
+      - ./.vibe-kanban-bridge.json:/data/.vibe-kanban-bridge.json
+      # Mount custom panel for Open WebUI
+      - ./open-webui-custom:/custom:ro
       - /app/node_modules
 
     # Health check
