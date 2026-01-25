@@ -57,6 +57,7 @@ help: ## Show this help message
 	@echo "  $(YELLOW)make logs$(NC)         Follow all logs"
 	@echo "  $(YELLOW)make logs-vibe$(NC)    Follow vibe-kanban logs"
 	@echo "  $(YELLOW)make logs-code$(NC)    Follow code-server logs"
+	@echo "  $(YELLOW)make watch-logs$(NC)    Watch for errors/fatal events"
 	@echo "  $(YELLOW)make stats$(NC)        Resource usage (CPU/Memory)"
 	@echo ""
 	@echo "$(CYAN)Container Access:$(NC)"
@@ -250,6 +251,16 @@ logs-tail: ## Show last 50 lines of all logs
 stats: ## Show resource usage (CPU/Memory)
 	@docker stats --no-stream vibe-server code-server
 
+.PHONY: watch-logs
+watch-logs: ## Watch logs for errors, fatal events, and failed health checks
+	@echo "$(CYAN)Monitoring for critical events...$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Watching for: Error | Fatal | Failed health check | WARN$(NC)"
+	@echo "$(YELLOW)Press Ctrl+C to stop$(NC)"
+	@echo ""
+	@echo "$(BLUE)═══════════════════════════════════════════════════════════════$(NC)"
+	@$(DOCKER_COMPOSE) logs -f 2>/dev/null | grep --line-buffered -E "ERROR|FATAL|Failed health check|WARN|error:|fatal:" || $(DOCKER_COMPOSE) logs -f
+
 # ============================================================================
 # CONTAINER ACCESS TARGETS
 # ============================================================================
@@ -404,6 +415,22 @@ doctor: ## Full diagnostics check with version tracking
 	@test -f agents/claude/settings.json && echo "  $(GREEN)✓$(NC) Claude settings exist" || echo "  $(YELLOW)⚠$(NC) Claude settings missing"
 	@test -f docker-compose.yml && echo "  $(GREEN)✓$(NC) docker-compose.yml exists" || echo "  $(RED)✗$(NC) docker-compose.yml missing"
 	@echo ""
+	@echo "$(BLUE)API Key Validation:$(NC)"
+	@if [ -f agents/claude/settings.json ]; then \
+		if grep -q "sk-ant-" agents/claude/settings.json 2>/dev/null; then \
+			echo "  $(GREEN)✓$(NC) Claude API key format valid (sk-ant- prefix)"; \
+		elif grep -q "sk-" agents/claude/settings.json 2>/dev/null; then \
+			echo "  $(YELLOW)⚠$(NC) Claude API key may be invalid (missing 'ant' in sk-ant-)"; \
+		else \
+			echo "  $(YELLOW)⚠$(NC) No Claude API key found or using GLM-4/Z.ai"; \
+		fi; \
+		if grep -q "api.z.ai" agents/claude/settings.json 2>/dev/null; then \
+			echo "  $(GREEN)✓$(NC) GLM-4/Z.ai proxy configured"; \
+		fi; \
+	else \
+		echo "  $(YELLOW)⚠$(NC) No settings.json found"; \
+	fi
+	@echo ""
 	@echo "$(BLUE)Container Status:$(NC)"
 	@docker ps --filter "name=vibe" --format "{{.Names}}: {{.Status}}" 2>/dev/null || echo "  $(YELLOW)⚠$(NC) No containers running"
 	@echo ""
@@ -420,6 +447,7 @@ doctor: ## Full diagnostics check with version tracking
 	@echo "$(CYAN)═══════════════════════════════════════════════════════════════$(NC)"
 	@echo ""
 	@echo "$(MAGENTA)💡 Run 'make versions' for detailed version history$(NC)"
+	@echo "$(MAGENTA)💡 Run 'make watch-logs' to monitor for errors$(NC)"
 
 # ============================================================================
 # ACCESS TARGETS
