@@ -4,6 +4,12 @@
 - Auto-incremented version based on commits
 
 ### Commits in this release
+- fix: only test buildable services in CI Docker Build test (5b1fcad)
+
+### Automated Changes
+- Auto-incremented version based on commits
+
+### Commits in this release
 - fix: replace remaining docker-compose with docker compose v2 (f208dde)
 
 ### Automated Changes
