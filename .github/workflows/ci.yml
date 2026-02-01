@@ -58,11 +58,11 @@ jobs:
         run: |
           echo "Checking shell script syntax..."
           if [ -f scripts/dev/dev-server.sh ]; then
-            sh -n scripts/dev/dev-server.sh
+            bash -n scripts/dev/dev-server.sh
             echo "✓ scripts/dev/dev-server.sh syntax valid"
           fi
           if [ -f scripts/setup/init.sh ]; then
-            sh -n scripts/setup/init.sh
+            bash -n scripts/setup/init.sh
             echo "✓ scripts/setup/init.sh syntax valid"
           fi
 
