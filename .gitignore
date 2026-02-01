@@ -4,6 +4,7 @@
 
 # Environment variables (contains sensitive data)
 .env
+.env.bak
 .env.local
 .env.*.local
 
@@ -14,17 +15,20 @@
 # Project secrets - only keep structure and examples
 secrets/*
 !secrets/.gitkeep
-!secrets/your-project/
+!secrets/example-project/
 
-secrets/your-project/*
-!secrets/your-project/.gitkeep
-!secrets/your-project/example.env
+secrets/example-project/*
+!secrets/example-project/.gitkeep
 
 # Agent configuration - only keep templates
 agents/claude/*
 !agents/claude/.gitkeep
 !agents/claude/settings.json.example
 !agents/claude/settings.glm4.json.example
+
+# Provider configuration - only keep templates
+config/providers/active.json
+config/providers/backup.json
 
 # ============================================================================
 # SYSTEM & TEMPORARY FILES
@@ -56,6 +60,10 @@ node_modules/
 # Repos - keep folder structure only
 repos/*
 !repos/.gitkeep
+# External cloned projects (excluded from git, managed separately)
+repos/vite-test/
+repos/vibe-kanban/
+repos/demo-app/
 
 # ============================================================================
 # DOCKER & CONTAINER ARTIFACTS
@@ -69,7 +77,7 @@ docker-compose.override.yml
 
 # Mission state and memory (only keep example)
 .vibe-state.json
-!.vibe-state.json.example
+!config/state/.vibe-state.json.example
 
 # State snapshots (for rollback)
 .vibe-state-backup.json
@@ -90,12 +98,12 @@ immune-response-*.log
 # Test execution logs
 test-harness-*.log
 
-# Kanban Bridge state files
-.vibe-kanban-bridge.json
-.vibe-dashboard.json
+# Kanban Bridge state files (now stored in config/state/)
+# .vibe-kanban-bridge.json
+# .vibe-dashboard.json
 
 # Observer Dashboard data
-observer-dashboard/data/
+services/observer-dashboard/data/
 
 # ============================================================================
 # PHASE 6: AGENT INTELLIGENCE & VISUALIZATION
@@ -115,3 +123,4 @@ observer-dashboard/data/
 .idea/
 *.sublime-*
 .history/
+tests/.test-data/

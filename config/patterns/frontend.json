@@ -1,0 +1,108 @@
+{
+  "_comment": "Frontend & UI Development pattern for task generation",
+  "name": "frontend",
+  "displayName": "Frontend & UI Development",
+  "description": "Complete frontend application with components, state management, routing, and responsive design",
+  "keywords": [
+    "frontend",
+    "ui",
+    "ux",
+    "client",
+    "web",
+    "interface",
+    "component",
+    "react",
+    "vue",
+    "angular",
+    "svelte",
+    "next",
+    "nuxt",
+    "state",
+    "redux",
+    "routing",
+    "responsive",
+    "css",
+    "tailwind",
+    "styled-components",
+    "animation",
+    "form",
+    "validation",
+    "accessibility",
+    "a11y",
+    "i18n"
+  ],
+  "estimatedHours": 60,
+  "taskCount": 9,
+  "priorityDistribution": {
+    "high": 6,
+    "medium": 3,
+    "low": 0
+  },
+  "tasks": [
+    {
+      "title": "Set up frontend framework",
+      "description": "Initialize React/Vue/Angular project with TypeScript, ESLint, Prettier, and build tools",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["setup", "framework", "typescript"]
+    },
+    {
+      "title": "Create component library",
+      "description": "Build reusable component library with buttons, inputs, modals, and common UI elements",
+      "priority": "high",
+      "estimatedHours": 12,
+      "tags": ["components", "ui", "library"]
+    },
+    {
+      "title": "Implement routing",
+      "description": "Set up client-side routing with route guards, lazy loading, and navigation",
+      "priority": "high",
+      "estimatedHours": 6,
+      "tags": ["routing", "navigation", "spa"]
+    },
+    {
+      "title": "Set up state management",
+      "description": "Implement state management (Redux, Zustand, Pinia) with actions, reducers, and selectors",
+      "priority": "high",
+      "estimatedHours": 10,
+      "tags": ["state", "redux", "store"]
+    },
+    {
+      "title": "Create responsive layout",
+      "description": "Build responsive layout with grid/flexbox, breakpoints, and mobile-first design",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["responsive", "css", "layout"]
+    },
+    {
+      "title": "Implement form validation",
+      "description": "Add client-side form validation with error messages and user feedback",
+      "priority": "high",
+      "estimatedHours": 6,
+      "tags": ["forms", "validation", "ux"]
+    },
+    {
+      "title": "Add animations & transitions",
+      "description": "Implement smooth animations and transitions for enhanced user experience",
+      "priority": "medium",
+      "estimatedHours": 6,
+      "tags": ["animation", "ux", "css"]
+    },
+    {
+      "title": "Implement internationalization",
+      "description": "Add i18n support with translations, date/time formatting, and RTL support",
+      "priority": "medium",
+      "estimatedHours": 8,
+      "tags": ["i18n", "localization", "translation"]
+    },
+    {
+      "title": "Optimize performance",
+      "description": "Implement code splitting, lazy loading, image optimization, and caching",
+      "priority": "medium",
+      "estimatedHours": 8,
+      "tags": ["performance", "optimization", "bundle"]
+    }
+  ],
+  "dependencies": [],
+  "relatedPatterns": ["api", "testing"]
+}

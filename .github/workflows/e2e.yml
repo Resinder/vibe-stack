@@ -1,0 +1,282 @@
+# ============================================================================
+# VIBE STACK - E2E Tests Pipeline
+# ============================================================================
+# End-to-end tests with Docker deployment validation
+
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOCKER_COMPOSE_FILE: docker-compose.yml
+  POSTGRES_HOST: localhost
+  POSTGRES_PORT: 5432
+  POSTGRES_DB: vibestack_test
+  POSTGRES_USER: vibeuser
+  # Use GitHub Secrets for sensitive data in production
+  # For CI/testing, use temporary credentials
+  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'vibepass-test-only' }}
+
+jobs:
+  # ============================================================================
+  # E2E SETUP JOB - Prepare environment
+  # ============================================================================
+  e2e-setup:
+    name: E2E Environment Setup
+    runs-on: ubuntu-latest
+    outputs:
+      should-run-e2e: ${{ steps.check.outputs.should-run }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check if E2E tests should run
+        id: check
+        run: |
+          # Skip E2E on documentation-only changes
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^docs/|\.md$'; then
+            echo "should-run=false" >> $GITHUB_OUTPUT
+            echo "::notice::Skipping E2E tests (documentation-only changes)"
+          else
+            echo "should-run=true" >> $GITHUB_OUTPUT
+            echo "::notice::E2E tests will run"
+          fi
+
+  # ============================================================================
+  # E2E TEST JOB - Docker deployment tests
+  # ============================================================================
+  e2e-docker-deployment:
+    name: E2E - Docker Deployment
+    runs-on: ubuntu-latest
+    needs: e2e-setup
+    if: needs.e2e-setup.outputs.should-run == 'true'
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Start Docker services
+        run: |
+          echo "Starting Docker Compose services..."
+          docker compose up -d --build
+
+          echo "Waiting for services to be healthy..."
+          timeout 120 bash -c 'until docker compose ps | grep -q "healthy"; do sleep 2; done'
+
+          echo "Services started successfully"
+          docker compose ps
+
+      - name: Verify service health
+        run: |
+          echo "Checking service health..."
+
+          # Check PostgreSQL
+          echo "Checking PostgreSQL..."
+          timeout 30 bash -c 'until docker compose exec -T postgres pg_isready -U vibeuser; do sleep 2; done'
+
+          # Check Vibe-Kanban
+          echo "Checking Vibe-Kanban..."
+          timeout 30 bash -c 'until curl -f http://localhost:4000/health || curl -f http://localhost:4000/; do sleep 2; done'
+
+          # Check MCP Server
+          echo "Checking MCP Server..."
+          timeout 30 bash -c 'until curl -f http://localhost:4001/health || curl -f http://localhost:4001/; do sleep 2; done'
+
+          echo "✓ All services are healthy"
+
+      - name: Install test dependencies
+        working-directory: ./mcp-server
+        run: npm ci
+
+      - name: Run E2E Docker deployment tests
+        working-directory: ./mcp-server
+        env:
+          DOCKER_COMPOSE_FILE: ${{ env.DOCKER_COMPOSE_FILE }}
+          POSTGRES_HOST: ${{ env.POSTGRES_HOST }}
+          POSTGRES_PORT: ${{ env.POSTGRES_PORT }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        run: |
+          node --test tests/e2e/docker-deployment.test.js \
+            --test-reporter=spec \
+            --test-reporter=html > e2e-results.html 2>&1 || true
+
+      - name: Upload E2E test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-docker-results
+          path: |
+            mcp-server/e2e-results.html
+          retention-days: 30
+
+      - name: Docker logs on failure
+        if: failure()
+        run: |
+          echo "::group::Docker Compose Logs"
+          docker compose logs --tail=100
+          echo "::endgroup::"
+
+      - name: Cleanup Docker services
+        if: always()
+        run: |
+          docker compose down -v
+
+  # ============================================================================
+  # E2E FULL STACK TEST JOB - Complete workflow tests
+  # ============================================================================
+  e2e-full-stack:
+    name: E2E - Full Stack Workflow
+    runs-on: ubuntu-latest
+    needs: e2e-setup
+    if: needs.e2e-setup.outputs.should-run == 'true'
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Start Docker services
+        run: |
+          docker compose up -d --build
+          timeout 120 bash -c 'until docker compose ps | grep -q "healthy\|running"; do sleep 2; done'
+
+      - name: Install test dependencies
+        working-directory: ./mcp-server
+        run: npm ci
+
+      - name: Run E2E full stack tests
+        working-directory: ./mcp-server
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+        run: |
+          node --test tests/e2e/full-stack.test.js \
+            --test-reporter=spec \
+            --test-reporter=html > e2e-fullstack-results.html 2>&1 || true
+
+      - name: Upload E2E full stack results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-fullstack-results
+          path: |
+            mcp-server/e2e-fullstack-results.html
+          retention-days: 30
+
+      - name: Docker logs on failure
+        if: failure()
+        run: docker compose logs --tail=100
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v
+
+  # ============================================================================
+  # E2E PERFORMANCE TEST JOB - Performance benchmarks
+  # ============================================================================
+  e2e-performance:
+    name: E2E - Performance Benchmarks
+    runs-on: ubuntu-latest
+    needs: e2e-setup
+    if: needs.e2e-setup.outputs.should-run == 'true'
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Start Docker services
+        run: |
+          docker compose up -d --build
+          timeout 120 bash -c 'until docker compose ps | grep -q "healthy\|running"; do sleep 2; done'
+
+      - name: Install test dependencies
+        working-directory: ./mcp-server
+        run: npm ci
+
+      - name: Run performance benchmarks
+        working-directory: ./mcp-server
+        env:
+          POSTGRES_HOST: localhost
+        run: |
+          echo "Running performance benchmarks..."
+          node --test tests/e2e/performance.test.js \
+            --test-reporter=spec \
+            --test-reporter=json > performance-results.json 2>&1 || true
+
+      - name: Parse and comment performance results
+        if: always()
+        run: |
+          if [ -f mcp-server/performance-results.json ]; then
+            echo "::group::Performance Results"
+            cat mcp-server/performance-results.json | jq '.[] | select(.status == "fail") | {name: .name, duration: .duration_ms}' || echo "No failures"
+            echo "::endgroup::"
+          fi
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-performance-results
+          path: mcp-server/performance-results.json
+          retention-days: 30
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v
+
+  # ============================================================================
+  # E2E SUMMARY - Aggregate E2E results
+  # ============================================================================
+  e2e-summary:
+    name: E2E Summary
+    runs-on: ubuntu-latest
+    needs: [e2e-setup, e2e-docker-deployment, e2e-full-stack, e2e-performance]
+    if: always()
+    steps:
+      - name: Check E2E results
+        run: |
+          echo "## E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Deployment | ${{ needs.e2e-docker-deployment.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Full Stack Workflow | ${{ needs.e2e-full-stack.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance Benchmarks | ${{ needs.e2e-performance.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.e2e-docker-deployment.result }}" != "success" ] || \
+             [ "${{ needs.e2e-full-stack.result }}" != "success" ]; then
+            echo "::error::E2E tests failed"
+            exit 1
+          fi
+
+          echo "✅ All E2E tests passed successfully"

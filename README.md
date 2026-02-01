@@ -1,9 +1,25 @@
 # 🚀 Vibe Stack
 
-> AI-powered development environment with Vibe-Kanban, Open WebUI, and code-server
+> AI-powered development environment with Vibe-Kanban, Open WebUI, code-server, and PostgreSQL
 
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](https://docker.com)
+[![Tests](https://img.shields.io/badge/Tests-309%20Passing-brightgreen)](https://github.com/Resinder/vibe-stack)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-1.0.0-orange)](https://github.com/Resinder/vibe-stack)
+
+> **🍴 Forked from [halilbarim/vibe-stack](https://github.com/halilbarim/vibe-stack)** | **319 Tests (309 passing)** | **Production Ready**
+
+---
+
+## 🙏 Acknowledgments
+
+This project is a fork of the original [Vibe Stack](https://github.com/halilbarim/vibe-stack) by [Halil Barım](https://github.com/halilbarim).
+
+Thank you Halil for creating this amazing project and sharing it with the community!
+
+**Please visit the original repository:** [halilbarim/vibe-stack](https://github.com/halilbarim/vibe-stack) ⭐
+
+---
 
 **Vibe Stack** is a production-ready Docker environment that combines:
 
@@ -11,33 +27,187 @@
 - **🤖 Open WebUI** - Chat interface for AI task planning
 - **💻 code-server** - Browser-based VS Code
 - **🧠 Claude Code** - AI coding assistant (optional)
+- **🗄️ PostgreSQL** - Reliable state management
+- **📊 Monitoring** - Prometheus + Grafana dashboards
 
-**✨ New:** Chat in Open WebUI to generate intelligent task plans in Vibe-Kanban!
+**✨ v1.0.0 Features (Fork Release):**
+
+- 🏗️ **Clean Architecture** - Modular 5-layer design
+- 🗄️ **PostgreSQL Storage** - Async, non-blocking state management with caching
+- 🔒 **Credential Management** - AES-256-GCM encrypted GitHub token storage
+- 🔒 **Rate Limiting** - Tiered protection for API endpoints
+- 📊 **Monitoring** - Prometheus metrics + Grafana dashboards
+- 🧪 **E2E Testing** - Comprehensive Docker deployment tests (270+ tests)
+- 📐 **Architecture Diagrams** - Mermaid.js documentation
+- ⚡ **High Performance** - Connection pooling, caching, async I/O
+- 🔐 **Security First** - Input sanitization, path traversal prevention
+- 🔄 **WebSocket Support** - Real-time task synchronization
+- 📝 **Test Coverage Dashboard** - HTML coverage visualization
+
+---
+
+## ✨ Key Features
+
+### 🤖 AI-Powered Task Planning
+
+- **Pattern Detection**: Automatically recognizes project types
+- **Intelligent Estimates**: Realistic time estimates
+- **Multi-Model Support**: OpenAI, Anthropic, Ollama, custom LLMs
+
+### 📋 Kanban Task Management
+
+- **5-Lane Board**: Backlog, Todo, In Progress, Done, Recovery
+- **Real-time Sync**: Instant updates via PostgreSQL
+- **Rich Metadata**: Priority, hours, tags, AI badges
+
+### 💻 Browser-Based Development
+
+- **Full VS Code**: Complete IDE in browser
+- **Git Integration**: Commit, push, pull
+- **Hot Reload**: Auto dev server management
+
+### 🗄️ PostgreSQL State Management
+
+- **Async Operations**: Non-blocking database I/O
+- **Connection Pooling**: Efficient resource usage
+- **Data Persistence**: Reliable storage with audit trail
+- **Caching**: 5-second TTL for frequently accessed data
+
+### 📊 Monitoring Stack
+
+- **Prometheus**: Metrics collection and storage
+- **Grafana**: Real-time dashboards
+- **AlertManager**: Alert routing and management
+- **Node Exporter**: System metrics
+- **cAdvisor**: Container metrics
 
 ---
 
 ## Quick Start (2 minutes)
 
 ```bash
-# 1. Clone and setup
 git clone https://github.com/Resinder/vibe-stack.git
 cd vibe-stack
-./init.sh
-
-# 2. Start services
-make up
-
-# 3. Open your browser
-open http://localhost:4000  # Vibe-Kanban
-open http://localhost:8081  # Open WebUI (AI Chat)
-open http://localhost:8443  # code-server (VS Code)
+./scripts/setup/install.sh    # Linux/Mac
+# or: scripts\setup\install.bat    # Windows
 ```
 
-**That's it!** You now have:
-- ✅ AI task planning via chat
-- ✅ Kanban board for project management
-- ✅ Browser-based IDE for coding
-- ✅ Real-time synchronization
+**That's it!** All services start automatically.
+
+**Access:**
+
+- Vibe-Kanban: <http://localhost:4000>
+- Open WebUI: <http://localhost:8081>
+- code-server: <http://localhost:8443>
+
+---
+
+## 🤖 Configure AI Provider (2 minutes)
+
+### Interactive Setup (Recommended)
+
+```bash
+./scripts/setup/setup-ai.sh      # Linux/Mac
+# or: scripts\setup\setup-ai.ps1  # Windows
+```
+
+Choose your AI provider:
+
+1. **Ollama** - Free, local AI (no API key)
+2. **OpenAI** - GPT-4, GPT-4 Turbo
+3. **Anthropic** - Claude 3.5 Sonnet
+4. **Z.AI (GLM-4)** - Chinese AI, cost-effective, GLM-4.7
+5. **OpenRouter** - Many models
+6. **Google** - Gemini
+7. **Groq** - Fast LLaMA
+
+The script guides you through setup step by step!
+
+---
+
+## 🔒 Security Setup (Required for Production)
+
+**⚠️ IMPORTANT:** Before deploying to production, you MUST configure secure credentials!
+
+### 1. Generate Secure Encryption Key
+
+```bash
+# Generate a 64-byte encryption key for credential storage
+openssl rand -base64 48
+```
+
+Add to `.env`:
+
+```bash
+CREDENTIAL_ENCRYPTION_KEY=<generated-key>
+```
+
+### 2. Generate Database Password
+
+```bash
+# Generate secure database password
+openssl rand -base64 24
+```
+
+Add to `.env`:
+
+```bash
+POSTGRES_PASSWORD=<generated-password>
+```
+
+### 3. Generate code-server Password
+
+```bash
+# Generate secure code-server password
+openssl rand -base64 16
+```
+
+Add to `.env`:
+
+```bash
+CODE_SERVER_PASSWORD=<generated-password>
+```
+
+### 4. Complete .env Example
+
+```bash
+# ============================================================================
+# CREDENTIAL SECURITY (CRITICAL - REQUIRED FOR PRODUCTION)
+# ============================================================================
+
+# Encryption key for storing user credentials (GitHub tokens, etc.)
+CREDENTIAL_ENCRYPTION_KEY=VeynlrVZurJZUNDB/ezFQthnwptFLX5/B3yrlsapvKCIS8VOJOVJZReYYrILdV/i
+
+# Database credentials
+POSTGRES_PASSWORD=vibepass
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DATABASE=vibestack
+POSTGRES_USER=vibeuser
+
+# code-server access
+CODE_SERVER_PASSWORD=dev123
+```
+
+### 5. GitHub Token Setup (Optional)
+
+To use GitHub integration features, set your token through Open WebUI:
+
+```
+You: Set my GitHub token to ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+Vibe Stack: ✅ GitHub token has been securely stored and configured
+```
+
+**Security Features:**
+
+- 🔐 AES-256-GCM encryption for all stored credentials
+- 🛡️ Rate limiting (5 operations/minute per user)
+- ✅ GitHub API token validation
+- 📊 Comprehensive audit logging
+- 🚫 No hardcoded credentials in code
+
+**📖 See [SECURITY.md](SECURITY.md) for comprehensive security documentation.**
 
 ---
 
@@ -49,136 +219,68 @@ open http://localhost:8443  # code-server (VS Code)
 | **Open WebUI** | 8081 | AI chat interface for task planning |
 | **code-server** | 8443 | Browser-based VS Code |
 | **MCP Server** | 4001 | API bridge for Open WebUI ↔ Vibe-Kanban |
+| **PostgreSQL** | 5432 | State management and persistence |
+| **Prometheus** | 9090 | Metrics collection |
+| **Grafana** | 3000 | Monitoring dashboards |
+
+### Optional Services (with monitoring)
+
+```bash
+# Start monitoring stack
+make up-monitoring
+```
 
 ---
 
 ## What You Can Do
 
-### 🤖 AI Task Planning (NEW!)
+### 🚀 Use Cases
 
-Open Open WebUI (http://localhost:8081) and chat:
+- **Solo Developers**: Manage projects, plan features, track progress
+- **Small Teams**: Collaborative task management with AI assistance
+- **Learning**: Experiment with AI-powered development tools
+- **Prototyping**: Quick project setup with best practices
 
-```
-You: Create a task plan for implementing OAuth authentication
+### 🛠️ MCP Tools (40+)
 
-AI: 🎯 Generated 10 tasks for "OAuth authentication"
+**Task Management**
 
-📊 Summary:
-  • Total: 10 tasks (~54 hours)
-  • High priority: 6 tasks
-  • Medium priority: 3 tasks
-  • Low priority: 1 task
+- `create_task` - Create new tasks
+- `move_task` - Move tasks between lanes
+- `update_task` - Update task properties
+- `delete_task` - Remove tasks
+- `get_board` - Get board state
+- `get_board_stats` - Get statistics
 
-📋 Tasks created in Vibe-Kanban!
-```
+**Planning**
 
-**Patterns detected automatically:**
-- Authentication → 8 tasks
-- Database → 7 tasks
-- API → 10 tasks
-- Frontend → 9 tasks
-- Testing → 7 tasks
-- Deployment → 9 tasks
+- `generate_plan` - AI-powered task planning
+- `analyze_goal` - Detect patterns and estimate tasks
 
-### 📋 Kanban Board
+**Repository Operations**
 
-- Drag-and-drop task management
-- 5 lanes: Backlog, Todo, In Progress, Done, Recovery
-- Real-time sync with Open WebUI
+- `clone_repo` - Clone git repositories
+- `search_repo` - Search code
+- `read_file` - Read file contents
 
-### 💻 Browser IDE
+**GitHub Integration**
 
-- Full VS Code in your browser
-- Git integration
-- Extension support
+- `github_create_issue` - Create GitHub issues
+- `github_list_issues` - List repository issues
+- `github_create_pr` - Create pull requests
 
----
+**File Operations**
 
-## Makefile Commands
+- `list_files` - List directory contents
+- `write_file` - Write files
+- `edit_file` - Edit files
 
-```bash
-# Start/Stop
-make up              # Start all services
-make down            # Stop all services
-make restart         # Restart services
+**Commands**
 
-# Monitoring
-make logs            # Follow all logs
-make health          # Check service health
-make stats           # Resource usage
+- `run_command` - Execute shell commands
+- `run_tests` - Run test suites
 
-# Open WebUI
-make webui           # Open Open WebUI (AI chat)
-make observer        # Open Observer Dashboard
-
-# AI Integration
-make mcp-test        # Test MCP server
-make mcp-tools       # List available AI tools
-make mcp-plan        # Test task generation
-
-# Updates
-make update          # Update all images with rolling restart
-make evolve          # Run evolution analysis
-make rollback        # Rollback to previous version
-
-# Diagnostics
-make doctor          # Full diagnostics check
-make test-harness    # Run immune system validation
-```
-
----
-
-## Configuration
-
-### Environment (.env)
-
-```bash
-# code-server password (required)
-CODE_SERVER_PASSWORD=your-password
-
-# Optional ports
-VIBE_PORT=4000
-CODE_SERVER_PORT=8443
-OPEN_WEBUI_PORT=8081
-```
-
-### Claude Settings (Optional)
-
-For Claude Code integration:
-
-```bash
-mkdir -p agents/claude
-cat > agents/claude/settings.json << 'EOF'
-{
-  "env": {
-    "ANTHROPIC_AUTH_TOKEN": "sk-ant-your-key",
-    "ANTHROPIC_BASE_URL": "https://api.anthropic.com"
-  }
-}
-EOF
-```
-
-**Or use GLM-4/Z.ai:**
-```bash
-{
-  "env": {
-    "ANTHROPIC_AUTH_TOKEN": "your-z-ai-key",
-    "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
-    "ANTHROPIC_DEFAULT_MODEL": "glm-4.7"
-  }
-}
-```
-
----
-
-## Documentation
-
-| Document | Description |
-|----------|-------------|
-| [GUIDE.md](docs/GUIDE.md) | Complete user guide |
-| [OPENWEBUI.md](docs/OPENWEBUI.md) | Open WebUI setup & examples |
-| [API.md](docs/API.md) | MCP server API reference |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Technical architecture |
+**And 20+ more tools!**
 
 ---
 
@@ -186,117 +288,392 @@ EOF
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                         Vibe Stack                          │
-│                                                              │
-│  ┌──────────────┐     ┌──────────────┐     ┌────────────┐  │
-│  │  Open WebUI  │────▶│  MCP Server  │◀────│ Vibe-Kanban │  │
-│  │  AI Chat     │     │  (Tools)     │     │ Task Board  │  │
-│  │  Port 8081   │     │  Port 4001   │     │ Port 4000   │  │
-│  └──────────────┘     └──────────────┘     └────────────┘  │
-│         │                                         │         │
-│         └─────────────────┬─────────────────────┘         │
-│                           ▼                               │
-│                    ┌──────────────┐                        │
-│                    │ code-server  │                        │
-│                    │  VS Code     │                        │
-│                    │  Port 8443   │                        │
-│                    └──────────────┘                        │
+│                        User Layer                           │
+│  Open WebUI    │    code-server    │   Claude Code CLI      │
+└─────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                     API Gateway Layer                        │
+│  MCP Server (STDIO)  │  HTTP API (REST)                    │
+└─────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                   Application Layer                          │
+│  Controllers │ Services │ Middleware │ Validators           │
+└─────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                      Data Layer                              │
+│  PostgreSQL (Primary)  │  Cache (5s TTL)  │  Bridge File    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Data Flow:**
-1. User chats in Open WebUI: "Create plan for OAuth"
-2. MCP server processes request
-3. Tasks generated in Vibe-Kanban (instantly visible)
-4. User works on tasks in code-server
+See [docs/diagrams/](docs/diagrams/) for detailed architecture diagrams.
 
 ---
 
-## Project Structure
+## Configuration
 
+### Environment Variables
+
+Copy `.env.example` to `.env`:
+
+```bash
+cp .env.example .env
 ```
-vibe-stack/
-├── docker-compose.yml          # Service orchestration
-├── Makefile                    # CLI commands
-├── init.sh                     # Setup script
-├── .env                        # Environment variables
-│
-├── mcp-server/                 # Open WebUI integration
-│   └── enhanced/
-│       ├── index.js           # MCP server (10 tools)
-│       ├── package.json
-│       └── Dockerfile
-│
-├── open-webui-custom/          # Custom UI panels
-│   └── kanban-panel.html       # Kanban board view
-│
-├── observer-dashboard/         # System monitoring
-│   └── index.html
-│
-├── agents/claude/              # Claude Code config
-│
-├── docs/                       # Documentation
-│   ├── GUIDE.md
-│   ├── OPENWEBUI.md
-│   ├── API.md
-│   └── ARCHITECTURE.md
-│
-└── .vibe-kanban-bridge.json   # Board state (synced)
+
+### Key Configuration
+
+```bash
+# PostgreSQL
+POSTGRES_PASSWORD=your_secure_password
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+
+# code-server
+CODE_SERVER_PASSWORD=your_secure_password
+
+# Monitoring (optional)
+GRAFANA_ADMIN_USER=admin
+GRAFANA_ADMIN_PASSWORD=admin
 ```
 
 ---
 
-## Troubleshooting
+## Development
 
-### Services not starting?
+### Run Tests
 
 ```bash
-make doctor              # Run diagnostics
-docker compose logs     # Check logs
+# Run all tests
+npm test
+
+# Run with coverage
+npm run test:coverage
+
+# Run specific test suite
+npm run test:models
+npm run test:services
+npm run test:controllers
 ```
 
-### Open WebUI not connecting to Vibe?
+### Lint Code
 
 ```bash
-# Check MCP server
-curl http://localhost:4001/health
-
-# Restart MCP server
-docker compose restart mcp-server
+npm run lint
+npm run lint:fix
 ```
 
-### Port conflicts?
+### Build MCP Server
 
-Edit `.env`:
 ```bash
-VIBE_PORT=5000        # Change Vibe-Kanban port
-CODE_SERVER_PORT=9443  # Change code-server port
+cd mcp-server
+npm run build
 ```
 
 ---
 
-## Requirements
+## Deployment
 
-- Docker 20.10+
-- Docker Compose v2.0+
-- Git
-- 8GB RAM minimum
-- 10GB disk space
+### Production
+
+```bash
+# Use production compose file
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+### Monitoring
+
+```bash
+# Enable monitoring stack
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+```
+
+---
+
+## 🐳 Docker Quick Reference
+
+### Essential Commands
+
+```bash
+# Start all services
+docker compose up -d
+# or
+make up
+# or
+npm run docker:up
+
+# View logs
+docker compose logs -f
+# or
+make logs
+
+# Stop services
+docker compose down
+# or
+make down
+# or
+npm run docker:down
+```
+
+### Development Mode
+
+```bash
+# Start with hot-reload enabled
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# or
+npm run docker:dev
+
+# Access shell in containers
+npm run docker:shell:vibe      # Vibe-Kanban shell
+npm run docker:shell:postgres  # PostgreSQL psql
+npm run docker:shell:mcp       # MCP Server shell
+```
+
+### Monitoring & Debugging
+
+```bash
+# View container status
+docker compose ps
+# or
+npm run docker:health
+
+# View resource usage
+docker compose stats
+# or
+npm run docker:stats
+
+# Open health dashboard
+npm run dashboard
+
+# View specific service logs
+npm run docker:logs:vibe
+npm run docker:logs:postgres
+npm run docker:logs:mcp
+```
+
+### Maintenance
+
+```bash
+# Rebuild all images
+docker compose build --no-cache
+# or
+npm run docker:rebuild
+
+# Pull latest images
+docker compose pull
+# or
+npm run docker:pull
+
+# Clean up unused resources
+docker system prune -f
+# or
+npm run docker:prune
+
+# Remove everything (including volumes)
+docker compose down -v
+# or
+npm run docker:clean
+```
+
+### Service URLs
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Vibe-Kanban | <http://localhost:4000> | None |
+| Open WebUI | <http://localhost:8081> | Create account |
+| code-server | <http://localhost:8443> | From .env (default: dev123) |
+| Grafana | <http://localhost:3000> | admin / From .env |
+| Prometheus | <http://localhost:9090> | None |
+| MCP Server API | <http://localhost:4001> | None |
+
+### Resource Limits
+
+Default limits defined in `docker-compose.yml`:
+
+```yaml
+vibe-kanban:   2 CPU, 2GB RAM
+code-server:   1 CPU, 1GB RAM
+open-webui:    1 CPU, 1GB RAM
+mcp-server:    0.5 CPU, 256MB RAM
+postgres:      1 CPU, 512MB RAM
+```
+
+Override in `.env`:
+
+```bash
+VIBE_CPU_LIMIT=4.0
+VIBE_MEMORY_LIMIT=4G
+```
+
+### Common Issues
+
+**Port already in use**
+
+```bash
+# Find process using port
+lsof -i :4000  # macOS/Linux
+netstat -ano | findstr :4000  # Windows
+
+# Kill process
+kill -9 <PID>  # macOS/Linux
+taskkill /PID <PID> /F  # Windows
+```
+
+**Container won't start**
+
+```bash
+# Check logs
+docker compose logs vibe-kanban
+
+# Check health status
+docker compose ps
+
+# Restart specific service
+docker compose restart vibe-kanban
+```
+
+**Out of disk space**
+
+```bash
+# Clean up Docker resources
+docker system prune -a --volumes
+```
+
+---
+
+## Docker Images (Auto-Updated)
+
+All Docker images are **automatically updated** to their latest stable versions:
+
+| Service | Image | Current Version | Update Source |
+|---------|-------|-----------------|---------------|
+| PostgreSQL | postgres | 18.1-alpine | Docker Hub |
+| code-server | lscr.io/linuxserver/code-server | latest | LinuxServer.io |
+| Open WebUI | ghcr.io/open-webui/open-webui | v0.7.2 | GHCR |
+| Prometheus | prom/prometheus | v3.1.0 | Docker Hub |
+| Grafana | grafana/grafana | 11.3.1 | Docker Hub |
+| AlertManager | prom/alertmanager | v0.28.0 | Docker Hub |
+| Node Exporter | prom/node-exporter | v1.8.2 | Docker Hub |
+| cAdvisor | gcr.io/cadvisor/cadvisor | v0.51.0 | GCR |
+
+### 🤖 Automatic Docker Updates
+
+**The system automatically keeps Docker images up-to-date without any manual intervention!**
+
+When new versions are released:
+1. ✅ GitHub Actions automatically checks daily at 00:00 UTC
+2. ✅ Updates docker-compose files with new versions
+3. ✅ Validates all changes
+4. ✅ Commits directly to main branch
+5. ✅ Creates a new GitHub release with version bump
+
+**No pull requests, no manual reviews - fully automated!**
+
+See [docs/05-operations/08-docker-auto-update.md](docs/05-operations/08-docker-auto-update.md) for details.
+
+---
+
+## Verify Installation
+
+```bash
+# Run end-to-end test
+make test-e2e
+
+# Or directly
+./scripts/setup/e2e-test.sh
+```
+
+---
+
+## Documentation
+
+- **[Quick Start](docs/01-getting-started/01-quick-start.md)** - Get running in 2 minutes
+- **[Development Quick Start](docs/01-getting-started/05-development-quickstart.md)** - Start coding in 5 minutes
+- **[User Guide](docs/02-user-guide/)** - Features and workflows
+- **[Technical Docs](docs/03-technical/)** - Architecture and internals
+- **[API Reference](docs/04-api/)** - MCP tools and HTTP API
+- **[Operations](docs/05-operations/)** - Deployment and monitoring
+- **[Development](docs/06-development/)** - Contributing and troubleshooting
+
+---
+
+## Project Status
+
+### ✅ Completed (v1.0.0)
+
+- [x] **Fork improvements** - All test imports fixed, 319 tests (309 passing, 10 skipped)
+- [x] **Auto versioning** - GitHub Actions automated version management
+- [x] **Dynamic docs** - Single-source-of-truth documentation system
+- [x] PostgreSQL state management
+- [x] Rate limiting middleware
+- [x] Monitoring stack (Prometheus + Grafana)
+- [x] E2E testing suite (319 tests, 309 passing)
+- [x] Architecture diagrams
+- [x] Enhanced logging with request tracing
+- [x] Detailed health checks
+- [x] WebSocket real-time synchronization
+- [x] Credential management system
+- [x] Test coverage dashboard
+- [x] Modular architecture with feature-based organization
+- [x] Multi-user collaboration test scenarios
+- [x] Docker image auto-update system
+
+### 🔄 In Progress
+
+- [ ] Task dependencies
+- [ ] Task templates
+
+### 📋 Planned
+
+- [ ] Multi-tenancy support
+- [ ] Advanced analytics
+- [ ] Custom themes
+
+---
+
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
+
+### Development Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Run in development mode
+npm run dev
+
+# Run tests
+npm test
+```
+
+---
+
+## 🍴 Fork Information
+
+This is a fork of the original [Vibe Stack](https://github.com/halilbarim/vibe-stack) by [Halil Barım](https://github.com/halilbarim).
+
+| Repository | URL |
+|------------|-----|
+| **Original** | [halilbarim/vibe-stack](https://github.com/halilbarim/vibe-stack) |
+| **This Fork** | [Resinder/vibe-stack](https://github.com/Resinder/vibe-stack) |
 
 ---
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file
+MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
 ## Support
 
-- **Documentation:** [docs/](docs/)
-- **Issues:** [GitHub Issues](https://github.com/Resinder/vibe-stack/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/Resinder/vibe-stack/discussions)
+- **Documentation**: [docs/](docs/)
+- **Issues**: [GitHub Issues](https://github.com/Resinder/vibe-stack/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Resinder/vibe-stack/discussions)
 
 ---
 
-**Made with ❤️ for AI-powered development**
+**Built with ❤️ by the Vibe Stack community**

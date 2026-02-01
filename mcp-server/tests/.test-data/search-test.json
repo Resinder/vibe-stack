@@ -1,0 +1,40 @@
+{
+  "lanes": {
+    "backlog": [
+      {
+        "id": "task-1769638917170-750r50kw1",
+        "title": "Auth Task",
+        "description": "",
+        "lane": "backlog",
+        "priority": "medium",
+        "status": "pending",
+        "tags": [],
+        "assignee": null,
+        "estimatedHours": null,
+        "createdAt": "2026-01-28T22:21:57.170Z",
+        "updatedAt": "2026-01-28T22:21:57.170Z",
+        "metadata": {}
+      },
+      {
+        "id": "task-1769638917171-nf8ybm0x4",
+        "title": "Other Task",
+        "description": "",
+        "lane": "backlog",
+        "priority": "medium",
+        "status": "pending",
+        "tags": [],
+        "assignee": null,
+        "estimatedHours": null,
+        "createdAt": "2026-01-28T22:21:57.171Z",
+        "updatedAt": "2026-01-28T22:21:57.171Z",
+        "metadata": {}
+      }
+    ],
+    "todo": [],
+    "in_progress": [],
+    "done": [],
+    "recovery": []
+  },
+  "lastSync": "2026-01-28T22:21:57.171Z",
+  "version": "1.0.0"
+}

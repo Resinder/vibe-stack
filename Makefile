@@ -87,6 +87,8 @@ help: ## Show this help message
 	@echo "$(CYAN)System Evolution:$(NC)"
 	@echo "  $(YELLOW)make evolve$(NC)      Run self-evolution analysis"
 	@echo "  $(YELLOW)make test-harness$(NC) Run immune system validation"
+	@echo "  $(YELLOW)make test$(NC)        Run all test suites"
+	@echo "  $(YELLOW)make test-coverage$(NC) Run tests with coverage report"
 	@echo "  $(YELLOW)make kanban-sync$(NC)  Sync system state with Kanban board"
 	@echo "  $(YELLOW)make observer$(NC)     Open Observer Dashboard"
 	@echo ""
@@ -110,6 +112,14 @@ help: ## Show this help message
 	@echo "$(CYAN)Development:$(NC)"
 	@echo "  $(YELLOW)make build$(NC)        Rebuild containers (no cache)"
 	@echo "  $(YELLOW)make dev$(NC)          Start with visible logs"
+	@echo ""
+	@echo "$(CYAN)Environments:$(NC)"
+	@echo "  $(YELLOW)make dev-up$(NC)           Start development environment"
+	@echo "  $(YELLOW)make dev-down$(NC)         Stop development environment"
+	@echo "  $(YELLOW)make prod-up$(NC)          Start production environment"
+	@echo "  $(YELLOW)make prod-down$(NC)        Stop production environment"
+	@echo "  $(YELLOW)make up-monitoring$(NC)     Start monitoring stack"
+	@echo "  $(YELLOW)make down-monitoring$(NC)   Stop monitoring stack"
 	@echo ""
 	@echo "$(CYAN)Code Quality:$(NC)"
 	@echo "  $(YELLOW)make lint$(NC)         Run shell script linting (shellcheck)"
@@ -202,8 +212,9 @@ setup: ## First-time setup (install & configure)
 	fi
 	@echo ""
 	@echo "$(CYAN)Setting script permissions...$(NC)"
-	@chmod +x dev-server.sh 2>/dev/null || echo "$(YELLOW)⚠ Could not set dev-server.sh as executable$(NC)"
-	@chmod +x init.sh 2>/dev/null || echo "$(YELLOW)⚠ Could not set init.sh as executable$(NC)"
+	@chmod +x scripts/setup/init.sh 2>/dev/null || echo "$(YELLOW)⚠ Could not set init.sh as executable$(NC)"
+	@chmod +x scripts/ops/evolve.sh 2>/dev/null || echo "$(YELLOW)⚠ Could not set evolve.sh as executable$(NC)"
+	@chmod +x scripts/ops/test-harness.sh 2>/dev/null || echo "$(YELLOW)⚠ Could not set test-harness.sh as executable$(NC)"
 	@echo "$(GREEN)✓ Script permissions set$(NC)"
 	@echo ""
 	@echo "$(GREEN)╔════════════════════════════════════════════════════════════╗$(NC)"
@@ -246,6 +257,66 @@ down: ## Stop all services
 .PHONY: restart
 restart: down up ## Restart all services
 
+# ============================================================================
+# ENVIRONMENT-SPECIFIC TARGETS
+# ============================================================================
+.PHONY: dev-up
+dev-up: ## Start development environment
+	@echo "$(CYAN)Starting development environment...$(NC)"
+	@NODE_ENV=development $(DOCKER_COMPOSE) up -d
+	@echo ""
+	@echo "$(GREEN)✓ Development environment started$(NC)"
+	@echo ""
+	@echo "$(CYAN)Development features:$(NC)"
+	@echo "  • Debug logging enabled"
+	@echo "  • Hot reload for code-server"
+	@echo "  • Volume mounts for code"
+	@echo ""
+
+.PHONY: dev-down
+dev-down: ## Stop development environment
+	@echo "$(CYAN)Stopping development environment...$(NC)"
+	@$(DOCKER_COMPOSE) down
+	@echo "$(GREEN)✓ Development environment stopped$(NC)"
+
+.PHONY: prod-up
+prod-up: ## Start production environment
+	@echo "$(CYAN)Starting production environment...$(NC)"
+	@$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml up -d
+	@echo ""
+	@echo "$(GREEN)✓ Production environment started$(NC)"
+	@echo ""
+	@echo "$(CYAN)Production features:$(NC)"
+	@echo "  • Resource limits enabled"
+	@echo "  • Health checks active"
+	@echo "  • Auto-restart enabled"
+	@echo ""
+
+.PHONY: prod-down
+prod-down: ## Stop production environment
+	@echo "$(CYAN)Stopping production environment...$(NC)"
+	@$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml down
+	@echo "$(GREEN)✓ Production environment stopped$(NC)"
+
+.PHONY: up-monitoring
+up-monitoring: ## Start monitoring stack (Prometheus + Grafana)
+	@echo "$(CYAN)Starting monitoring stack...$(NC)"
+	@$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+	@echo ""
+	@echo "$(GREEN)✓ Monitoring stack started$(NC)"
+	@echo ""
+	@echo "$(CYAN)Monitoring Services:$(NC)"
+	@echo "  • Prometheus: http://localhost:9090"
+	@echo "  • Grafana: http://localhost:3000 (admin/admin)"
+	@echo "  • AlertManager: http://localhost:9093"
+	@echo ""
+
+.PHONY: down-monitoring
+down-monitoring: ## Stop monitoring stack
+	@echo "$(CYAN)Stopping monitoring stack...$(NC)"
+	@$(DOCKER_COMPOSE) -f docker-compose.monitoring.yml down
+	@echo "$(GREEN)✓ Monitoring stack stopped$(NC)"
+
 .PHONY: ps
 ps: ## Show running containers
 	@$(DOCKER_COMPOSE) ps
@@ -256,7 +327,7 @@ status: ## Detailed service status
 	@docker ps --filter "name=vibe" --filter "name=code-server" --filter "name=open-webui" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 	@echo ""
 	@echo "$(CYAN)Health Status:$(NC)"
-	@docker inspect -f '{{.Name}}: {{.State.Health.Status}}' vibe-server code-server open-webui 2>/dev/null || echo "Health check not available"
+	@docker inspect -f '{{.Name}}: {{.State.Health.Status}}' vibe-kanban code-server open-webui 2>/dev/null || echo "Health check not available"
 
 .PHONY: watch
 watch: ## Enable watch mode (auto-reload on file changes)
@@ -288,7 +359,7 @@ logs-tail: ## Show last 50 lines of all logs
 
 .PHONY: stats
 stats: ## Show resource usage (CPU/Memory)
-	@docker stats --no-stream vibe-server code-server open-webui
+	@docker stats --no-stream vibe-kanban code-server open-webui
 
 .PHONY: watch-logs
 watch-logs: ## Watch logs for errors, fatal events, and failed health checks
@@ -305,7 +376,7 @@ watch-logs: ## Watch logs for errors, fatal events, and failed health checks
 # ============================================================================
 .PHONY: shell-vibe
 shell-vibe: ## Enter vibe-kanban container shell
-	@docker exec -it vibe-server bash
+	@docker exec -it vibe-kanban bash
 
 .PHONY: shell-code
 shell-code: ## Enter code-server container shell
@@ -313,12 +384,12 @@ shell-code: ## Enter code-server container shell
 
 .PHONY: shell-root
 shell-root: ## Enter vibe-kanban container as root
-	@docker exec -it -u root vibe-server bash
+	@docker exec -it -u root vibe-kanban bash
 
 .PHONY: claude
 claude: ## Quick access to Claude Code CLI
 	@echo "$(CYAN)Opening Claude Code...$(NC)"
-	@docker exec -it vibe-server su - node -c "claude --dangerously-skip-permissions"
+	@docker exec -it vibe-kanban su - node -c "claude --dangerously-skip-permissions"
 
 # ============================================================================
 # CONFIGURATION TARGETS
@@ -347,11 +418,11 @@ secrets: ## List project secrets directories
 evolve: ## Run self-evolution analysis
 	@echo "$(CYAN)Running Vibe Stack evolution analysis...$(NC)"
 	@echo ""
-	@if [ -f evolve.sh ]; then \
-		./evolve.sh; \
+	@if [ -f scripts/ops/evolve.sh ]; then \
+		./scripts/ops/evolve.sh; \
 	else \
 		echo "$(RED)Error: evolve.sh not found$(NC)"; \
-		echo "$(YELLOW)This script should be in the Vibe Stack root directory$(NC)"; \
+		echo "$(YELLOW)This script should be in scripts/ops/$(NC)"; \
 		exit 1; \
 	fi
 
@@ -359,14 +430,69 @@ evolve: ## Run self-evolution analysis
 test-harness: ## Run immune system validation (branch, validate, dry-run, health check)
 	@echo "$(CYAN)Running Vibe Stack immune system validation...$(NC)"
 	@echo ""
-	@if [ -f test-harness.sh ]; then \
-		./test-harness.sh --skip-branch && \
+	@if [ -f scripts/ops/test-harness.sh ]; then \
+		./scripts/ops/test-harness.sh --skip-branch && \
 		echo "" && \
 		echo "$(CYAN)Test harness passed - triggering Kanban sync...$(NC)" && \
 		$(MAKE) --no-print-directory kanban-sync; \
 	else \
 		echo "$(RED)Error: test-harness.sh not found$(NC)"; \
-		echo "$(YELLOW)This script should be in the Vibe Stack root directory$(NC)"; \
+		echo "$(YELLOW)This script should be in scripts/ops/$(NC)"; \
+		exit 1; \
+	fi
+
+.PHONY: test
+test: ## Run all test suites
+	@echo "$(CYAN)Running test suite...$(NC)"
+	@echo ""
+	@if [ -f package.json ]; then \
+		npm test; \
+	else \
+		echo "$(RED)Error: package.json not found$(NC)"; \
+		exit 1; \
+	fi
+
+.PHONY: test-coverage
+test-coverage: ## Run tests with coverage report
+	@echo "$(CYAN)Running tests with coverage...$(NC)"
+	@echo ""
+	@if [ -f package.json ]; then \
+		npm run test:coverage; \
+	else \
+		echo "$(RED)Error: package.json not found$(NC)"; \
+		exit 1; \
+	fi
+
+.PHONY: test-e2e
+test-e2e: ## Run end-to-end tests
+	@echo "$(CYAN)Running E2E tests...$(NC)"
+	@echo ""
+	@if [ -f scripts/setup/e2e-test.sh ]; then \
+		bash scripts/setup/e2e-test.sh; \
+	else \
+		echo "$(RED)Error: E2E test script not found$(NC)"; \
+		exit 1; \
+	fi
+
+.PHONY: setup-ai
+setup-ai: ## Run interactive AI provider setup
+	@echo "$(CYAN)Starting AI provider setup...$(NC)"
+	@echo ""
+	@if [ -f scripts/setup/setup-ai.sh ]; then \
+		bash scripts/setup/setup-ai.sh; \
+	else \
+		echo "$(RED)Error: setup-ai.sh script not found$(NC)"; \
+		exit 1; \
+	fi
+
+.PHONY: cleanup
+cleanup: ## Stop services and clean up old Docker images
+	@echo "$(CYAN)Starting Docker cleanup...$(NC)"
+	@echo ""
+	@if [ -f scripts/setup/cleanup.sh ]; then \
+		bash scripts/setup/cleanup.sh; \
+	else \
+		echo "$(RED)Error: cleanup.sh script not found$(NC)"; \
 		exit 1; \
 	fi
 
@@ -374,8 +500,8 @@ test-harness: ## Run immune system validation (branch, validate, dry-run, health
 kanban-sync: ## Sync system state with Kanban board
 	@echo "$(CYAN)Running Kanban Bridge sync...$(NC)"
 	@echo ""
-	@if [ -f kanban-sync.sh ]; then \
-		./kanban-sync.sh; \
+	@if [ -f scripts/ops/kanban-sync.sh ]; then \
+		./scripts/ops/kanban-sync.sh; \
 	else \
 		echo "$(YELLOW)Kanban sync script not found - skipping$(NC)"; \
 	fi
@@ -383,9 +509,9 @@ kanban-sync: ## Sync system state with Kanban board
 .PHONY: observer
 observer: ## Open Observer Dashboard in browser
 	@echo "$(CYAN)Opening Observer Dashboard...$(NC)"
-	@command -v xdg-open >/dev/null 2>&1 && xdg-open observer-dashboard/index.html || \
-	 command -v open >/dev/null 2>&1 && open observer-dashboard/index.html || \
-	 echo "$(YELLOW)Please open manually:$(NC)\n  observer-dashboard/index.html"
+	@command -v xdg-open >/dev/null 2>&1 && xdg-open services/observer-dashboard/index.html || \
+	 command -v open >/dev/null 2>&1 && open services/observer-dashboard/index.html || \
+	 echo "$(YELLOW)Please open manually:$(NC)\n  services/observer-dashboard/index.html"
 
 # ============================================================================
 # MAINTENANCE TARGETS
@@ -551,8 +677,27 @@ build: ## Rebuild containers without cache
 	@echo "$(GREEN)✓ Build complete$(NC)"
 
 .PHONY: dev
-dev: ## Start services with visible logs
-	@$(DOCKER_COMPOSE) up
+dev: ## Start services in development mode with hot-reload
+	@echo "$(CYAN)Starting development environment...$(NC)"
+	@echo ""
+	@$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.dev.yml up
+
+.PHONY: dev-up
+dev-up: ## Start services in development mode (detached)
+	@echo "$(CYAN)Starting development environment in background...$(NC)"
+	@echo ""
+	@$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.dev.yml up -d
+	@echo ""
+	@echo "$(GREEN)✓ Dev environment started$(NC)"
+	@echo "Run 'make dev-logs' to see logs"
+
+.PHONY: dev-down
+dev-down: ## Stop development services
+	@$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.dev.yml down
+
+.PHONY: dev-logs
+dev-logs: ## Show development logs
+	@$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.dev.yml logs -f
 
 # ============================================================================
 # CODE QUALITY TARGETS

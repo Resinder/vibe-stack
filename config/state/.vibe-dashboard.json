@@ -1,0 +1,42 @@
+{
+  "evolution_score": "🌟 System Optimal - Phase 6 Complete",
+  "resource_usage": [
+    {
+      "name": "code-server",
+      "cpu": "5%",
+      "mem": "25%"
+    },
+    {
+      "name": "open-webui",
+      "cpu": "8%",
+      "mem": "30%"
+    }
+  ],
+  "immune_status": "clean",
+  "immune_responses_today": 1,
+  "immune_resolution": "code-server healthcheck fixed (port 8081)",
+  "last_updated": "2025-01-25T11:30:00Z",
+  "mission_state": "Phase 6: Agent Intelligence & Visualization",
+  "mission_percent": 100,
+  "services": {
+    "code-server": {
+      "status": "healthy",
+      "port": 8443
+    },
+    "open-webui": {
+      "status": "healthy",
+      "port": 8081
+    },
+    "vibe-kanban": {
+      "status": "unhealthy",
+      "issue": "Network connectivity to Debian repositories"
+    }
+  },
+  "kanban_stats": {
+    "backlog": 1,
+    "todo": 1,
+    "in_progress": 0,
+    "done": 3,
+    "recovery": 0
+  }
+}

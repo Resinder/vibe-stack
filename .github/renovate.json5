@@ -1,0 +1,206 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Renovate configuration for Vibe Stack - automated Docker and dependency updates",
+
+  // Pipeline scheduling
+  "timezone": "UTC",
+  "schedule": ["every weekday"],
+  "updateNotScheduled": false,
+
+  // Commit message configuration
+  "commitMessagePrefix": "chore(deps)",
+  "commitMessageAction": "update",
+  "commitMessageTopic": "{{depName}}",
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
+
+  // Label and PR management
+  "labels": ["dependencies", "docker", "automated"],
+  "assignees": [],
+  "reviewers": [],
+  "dependencyDashboardApproval": false,
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2,
+
+  // Version strategies
+  "rangeStrategy": "replace",
+  "pinDigests": true,
+  "separateMajorMinor": true,
+  "separateMinorPatch": false,
+
+  // Docker image specific configuration
+  "docker": {
+    "pinDigests": true,
+    "commitMessageTopic": "{{{depName}}}{{{digest}}}",
+    "major": { "enabled": true },
+    "minor": { "enabled": true },
+    "patch": { "enabled": true }
+  },
+
+  // Docker Compose file support
+  "docker-compose": {
+    "fileMatch": ["docker-compose\\.yml$", "docker-compose\\..*\\.yml$"]
+  },
+
+  // Package rules for Docker images
+  "packageRules": [
+    // Core Vibe Stack images - group together
+    {
+      "description": "Group core Vibe Stack Docker images",
+      "matchPackagePatterns": [
+        "^node",
+        "^postgres",
+        "^linuxserver/code-server",
+        "^ghcr.io/open-webui/open-webui"
+      ],
+      "groupName": "Vibe Stack core images",
+      "automerge": false,
+      "prPriority": 10
+    },
+    // Monitoring stack images - group together
+    {
+      "description": "Group monitoring stack Docker images",
+      "matchPackagePatterns": [
+        "^prom/",
+        "^grafana/",
+        "^gcr.io/cadvisor"
+      ],
+      "groupName": "Monitoring stack images",
+      "automerge": false,
+      "prPriority": 8
+    },
+    // Major versions - require manual review
+    {
+      "description": "Require manual review for major version updates",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "prPriority": 5,
+      "labels": ["dependencies", "docker", "major-update", "manual-review"]
+    },
+    // Minor/patch updates - can auto-merge if tests pass
+    {
+      "description": "Auto-merge minor and patch updates if tests pass",
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "prPriority": 3,
+      "labels": ["dependencies", "docker", "auto-merge"]
+    },
+    // Node.js specific - pin to LTS versions only
+    {
+      "description": "Node.js - only update to LTS versions",
+      "matchPackageNames": ["node"],
+      "allowedVersions": "/^(18|20|22)\\./",
+      "prPriority": 15
+    },
+    // PostgreSQL specific - pin to supported versions
+    {
+      "description": "PostgreSQL - only update to supported versions",
+      "matchPackageNames": ["postgres"],
+      "allowedVersions": "/^(14|15|16|17|18)\\./",
+      "prPriority": 15
+    },
+    // Specific version pinning for critical images
+    {
+      "description": "Pin specific Docker images to exact versions",
+      "matchPackageNames": [
+        "postgres",
+        "prom/prometheus",
+        "grafana/grafana",
+        "prom/alertmanager",
+        "prom/node-exporter",
+        "ghcr.io/open-webui/open-webui"
+      ],
+      "versioning": "docker",
+      "pinDigests": true,
+      "prPriority": 20
+    }
+  ],
+
+  // npm package management
+  "npm": {
+    "fileMatch": ["package\\.json$", "mcp-server/package\\.json$"]
+  },
+
+  // npm package rules
+  "packageRules": [
+    // Group @modelcontextprotocol SDK updates
+    {
+      "description": "Group MCP SDK updates",
+      "matchPackagePrefixes": ["@modelcontextprotocol/"],
+      "groupName": "MCP SDK packages",
+      "automerge": false,
+      "prPriority": 12
+    },
+    // Group Express ecosystem updates
+    {
+      "description": "Group Express ecosystem updates",
+      "matchPackagePrefixes": ["express", "ws", "helmet"],
+      "groupName": "Express ecosystem",
+      "automerge": true,
+      "prPriority": 7
+    },
+    // Security updates - high priority
+    {
+      "description": "High priority for security updates",
+      "matchUpdateTypes": ["patch"],
+      "matchSourceUrlPrefixes": ["https://github.com/advisories"],
+      "automerge": true,
+      "prPriority": 20,
+      "labels": ["dependencies", "security", "high-priority"]
+    }
+  ],
+
+  // Regex manager for version.json updates
+  "regexManagers": [
+    {
+      "description": "Update Docker image tags in version.json",
+      "fileMatch": ["^version\\.json$"],
+      "matchStrings": [
+        "\"tag\":\\s*\"(?<currentValue>[^\"]+)\"\\s*,\\s*\"description\":\\s*\"[^\"]*\"\\s*,\\s*\"source\":\\s*\"(?<registryUrl>https?://[^\"]+/(?<depName>[^/]+/[^\"]+))\""
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
+  ],
+
+  // Ignore specific versions/packages
+  "ignoreDeps": [],
+
+  // Lock file maintenance
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 3am on Monday"],
+    "commitMessageAction": "lock file maintenance"
+  },
+
+  // Vulnerability alerts
+  "vulnerabilityAlerts": {
+    "labels": ["security", "high-priority"],
+    "assignees": []
+  },
+
+  // Custom host configuration for private registries (if needed)
+  "hostRules": [
+    {
+      "matchHost": "docker.io",
+      "concurrentRequestLimit": 5
+    },
+    {
+      "matchHost": "ghcr.io",
+      "concurrentRequestLimit": 5
+    },
+    {
+      "matchHost": "gcr.io",
+      "concurrentRequestLimit": 3
+    }
+  ],
+
+  // Logging and notifications
+  "onboarding": false,
+  "requireConfig": "optional",
+  "configMigration": true,
+  "prHeader": "Automated by [Renovate](https://github.com/renovatebot/renovate)",
+  "prFooter": "This PR is auto-generated by Renovate. Please review the changes and ensure tests pass before merging."
+}

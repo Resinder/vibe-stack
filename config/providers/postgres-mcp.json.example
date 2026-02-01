@@ -1,0 +1,41 @@
+{
+  "_comment": "PostgreSQL MCP Server Configuration - Official",
+  "_version": "1.0.0",
+  "name": "postgres-official",
+  "enabled": false,
+  "prefix": "postgres",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-postgres"],
+  "env": {
+    "POSTGRES_CONNECTION_STRING": "${POSTGRES_MCP_CONNECTION_STRING}"
+  },
+  "description": "Official PostgreSQL MCP server for database query and management",
+  "tools": [
+    "query",
+    "execute_sql",
+    "list_tables",
+    "describe_table",
+    "list_databases"
+  ],
+  "features": {
+    "authentication": "PostgreSQL connection string required",
+    "connection_pooling": "Automatic connection pooling",
+    "transaction_support": "Full transaction support",
+    "prepared_statements": "Supported for security and performance"
+  },
+  "configuration": {
+    "connection_string_format": "postgresql://user:password@host:port/database",
+    "environment_variable": "POSTGRES_MCP_CONNECTION_STRING",
+    "ssl_options": "Supports SSL connections via connection string parameters",
+    "timeout": "Configurable via connection string"
+  },
+  "security": {
+    "input_validation": "SQL injection protection via prepared statements",
+    "query_restrictions": "None - full SQL access",
+    "recommended_practices": [
+      "Use read-only users when possible",
+      "Limit connection permissions",
+      "Use SSL for remote connections"
+    ]
+  }
+}

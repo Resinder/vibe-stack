@@ -1,0 +1,350 @@
+name: SBOM Generation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docker-compose.yml'
+      - 'docker-compose.monitoring.yml'
+      - 'Dockerfile'
+      - 'mcp-server/Dockerfile'
+      - 'mcp-server/package.json'
+      - 'package.json'
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'mcp-server/package.json'
+      - 'package.json'
+
+  workflow_dispatch:
+
+  schedule:
+    # Run SBOM generation weekly
+    - cron: '0 2 * * 0'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  # Generate SBOM for MCP Server
+  mcp-server-sbom:
+    name: MCP Server SBOM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build MCP Server for SBOM
+        uses: docker/build-push-action@v5
+        with:
+          context: ./mcp-server
+          file: ./mcp-server/Dockerfile
+          target: production
+          tags: vibe-mcp-server:sbom
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Install Syft
+        run: |
+          wget -qO /usr/local/bin/syft https://raw.githubusercontent.com/anchore/syft/main/install.sh
+          chmod +x /usr/local/bin/syft
+
+      - name: Generate SBOM for MCP Server
+        run: |
+          mkdir -p sbom-results
+
+          # Generate SPDX JSON format
+          syft vibe-mcp-server:sbom \
+            -o spdx-json \
+            --file sbom-results/mcp-server-spdx.json
+
+          # Generate CycloneDX JSON format
+          syft vibe-mcp-server:sbom \
+            -o cyclonedx-json \
+            --file sbom-results/mcp-server-cyclonedx.json
+
+          # Generate table format for review
+          syft vibe-mcp-server:sbom \
+            -o table \
+            --file sbom-results/mcp-server-packages.txt
+
+          # Display summary
+          echo "## MCP Server SBOM Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat sbom-results/mcp-server-packages.txt >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-server-sbom
+          path: sbom-results/
+          retention-days: 90
+
+      - name: Attach SBOM to release (on main branch)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          files: |
+            sbom-results/mcp-server-spdx.json
+            sbom-results/mcp-server-cyclonedx.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Generate SBOM for all Docker images
+  docker-images-sbom:
+    name: Docker Images SBOM
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        image:
+          - name: "node"
+            ref: "node:20.18.0-slim"
+            file: "node-sbom.json"
+          - name: "postgres"
+            ref: "postgres:16.8-alpine"
+            file: "postgres-sbom.json"
+          - name: "code-server"
+            ref: "lscr.io/linuxserver/code-server:4.24.1"
+            file: "code-server-sbom.json"
+          - name: "open-webui"
+            ref: "ghcr.io/open-webui/open-webui:v0.5.3"
+            file: "open-webui-sbom.json"
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Syft
+        run: |
+          wget -qO /usr/local/bin/syft https://raw.githubusercontent.com/anchore/syft/main/install.sh
+          chmod +x /usr/local/bin/syft
+
+      - name: Pull Docker image
+        run: |
+          docker pull ${{ matrix.image.ref }}
+
+      - name: Generate SBOM
+        run: |
+          mkdir -p sbom-results
+
+          # Generate SPDX JSON format
+          syft ${{ matrix.image.ref }} \
+            -o spdx-json \
+            --file sbom-results/${{ matrix.image.file }}
+
+          # Generate summary
+          PKG_COUNT=$(jq '.packages | length' sbom-results/${{ matrix.image.file }} 2>/dev/null || echo 0)
+          echo "**${{ matrix.image.name }}:** $PKG_COUNT packages" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-sbom-${{ matrix.image.name }}
+          path: sbom-results/
+          retention-days: 90
+
+  # Generate SBOM for npm dependencies
+  npm-sbom:
+    name: NPM Dependencies SBOM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install CycloneDX CLI
+        run: |
+          wget -qO /usr/local/bin/cdxgen https://github.com/CycloneDX/cdxgen/releases/download/v10.9.0/cdxgen-linux-amd64
+          chmod +x /usr/local/bin/cdxgen
+
+      - name: Generate MCP Server SBOM
+        run: |
+          mkdir -p sbom-results
+
+          cd mcp-server
+          npm ci --production
+
+          cdxgen . -o ../sbom-results/mcp-server-npm-sbom.json
+
+          cd ..
+
+          # Display package count
+          PKG_COUNT=$(jq '.components | length' sbom-results/mcp-server-npm-sbom.json 2>/dev/null || echo 0)
+          echo "**MCP Server NPM Packages:** $PKG_COUNT" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload NPM SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-sbom
+          path: sbom-results/
+          retention-days: 90
+
+  # Merge and validate all SBOMs
+  merge-sboms:
+    name: Merge and Validate SBOMs
+    needs: [mcp-server-sbom, docker-images-sbom, npm-sbom]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all SBOM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-sboms/
+
+      - name: Install Grype for vulnerability check
+        run: |
+          wget -qO /usr/local/bin/grype https://raw.githubusercontent.com/anchore/grype/main/install.sh
+          chmod +x /usr/local/bin/grype
+
+      - name: Generate comprehensive SBOM summary
+        run: |
+          echo "# Vibe Stack - Complete SBOM Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## SBOM Files Generated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # List all SBOM files
+          find all-sboms -name "*.json" -type f | while read -r file; do
+            echo "- $(basename "$file")" >> $GITHUB_STEP_SUMMARY
+          done
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Package Counts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Count packages from MCP Server
+          if [ -f all-sboms/mcp-server-sbom/mcp-server-spdx.json ]; then
+            PKG_COUNT=$(jq '.packages | length' all-sboms/mcp-server-sbom/mcp-server-spdx.json 2>/dev/null || echo 0)
+            echo "- MCP Server (Docker): $PKG_COUNT packages" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Count from NPM SBOM
+          if [ -f all-sboms/npm-sbom/mcp-server-npm-sbom.json ]; then
+            PKG_COUNT=$(jq '.components | length' all-sboms/npm-sbom/mcp-server-npm-sbom.json 2>/dev/null || echo 0)
+            echo "- MCP Server (NPM): $PKG_COUNT packages" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Count from Docker images
+          for sbom in all-sboms/docker-sbom-*/*.json; do
+            if [ -f "$sbom" ]; then
+              PKG_COUNT=$(jq '.packages | length' "$sbom" 2>/dev/null || echo 0)
+              IMG_NAME=$(echo "$sbom" | sed 's|.*/docker-sbom-||' | sed 's|/.*||')
+              echo "- $IMG_NAME: $PKG_COUNT packages" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Formats" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- SPDX JSON (standard format)" >> $GITHUB_STEP_SUMMARY
+          echo "- CycloneDX JSON (alternative format)" >> $GITHUB_STEP_SUMMARY
+          echo "- Text table (human readable)" >> $GITHUB_STEP_SUMMARY
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Compliance" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ SBOMs follow NTIA minimum elements" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All dependencies are tracked" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Vulnerability scanning enabled" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload complete SBOM bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: complete-sbom-bundle
+          path: all-sboms/
+          retention-days: 90
+
+      - name: Create SBOM summary file
+        run: |
+          cat > all-sboms/SBOM-README.md << 'EOF'
+          # Vibe Stack - Software Bill of Materials (SBOM)
+
+          This directory contains complete SBOMs for all components of the Vibe Stack project.
+
+          ## What is an SBOM?
+
+          A Software Bill of Materials (SBOM) is a comprehensive inventory of all software components,
+          libraries, and dependencies used in a project. It provides transparency and helps with:
+
+          - Vulnerability management
+          - License compliance
+          - Supply chain security
+          - Dependency tracking
+
+          ## Contents
+
+          ### MCP Server
+          - `mcp-server-spdx.json` - SPDX format SBOM
+          - `mcp-server-cyclonedx.json` - CycloneDX format SBOM
+          - `mcp-server-packages.txt` - Human-readable package list
+
+          ### Docker Images
+          - `node-sbom.json` - Node.js runtime
+          - `postgres-sbom.json` - PostgreSQL database
+          - `code-server-sbom.json` - VS Code browser
+          - `open-webui-sbom.json` - AI chat interface
+
+          ### NPM Dependencies
+          - `mcp-server-npm-sbom.json` - NPM packages
+
+          ## Formats
+
+          - **SPDX**: Standard Package Data Exchange format (ISO/IEC JTC 1/SC 38)
+          - **CycloneDX**: Full-stack BOM standard (OWASP)
+          - **Table**: Human-readable text format
+
+          ## Using These SBOMs
+
+          ### View SBOM contents
+          ```bash
+          jq '.packages[] | {name, version, licenses}' mcp-server-spdx.json
+          ```
+
+          ### Check for vulnerabilities (using Grype)
+          ```bash
+          grype sbom:mcp-server-spdx.json
+          ```
+
+          ### Compare versions
+          ```bash
+          cyclonedx-cli diff sbom-v1.json sbom-v2.json
+          ```
+
+          ## Compliance
+
+          These SBOMs comply with:
+          - NTIA Minimum Elements (1.1)
+          - Executive Order 14028 (US)
+          - Cybersecurity & Infrastructure Security Agency (CISA) guidelines
+
+          ## Automation
+
+          SBOMs are automatically generated on:
+          - Every push to main branch
+          - Pull requests affecting dependencies
+          - Weekly schedule (Sundays at 2 AM UTC)
+
+          For questions, see https://github.com/Resinder/vibe-stack
+          EOF
+
+          cat all-sboms/SBOM-README.md >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,108 @@
+{
+  "_comment": "Deployment & DevOps pattern for task generation",
+  "name": "deployment",
+  "displayName": "Deployment & DevOps",
+  "description": "Complete deployment setup with Docker, CI/CD, monitoring, logging, and infrastructure automation",
+  "keywords": [
+    "deploy",
+    "deployment",
+    "devops",
+    "docker",
+    "kubernetes",
+    "k8s",
+    "ci",
+    "cd",
+    "pipeline",
+    "github-actions",
+    "gitlab-ci",
+    "jenkins",
+    "aws",
+    "azure",
+    "gcp",
+    "cloud",
+    "serverless",
+    "lambda",
+    "infrastructure",
+    "terraform",
+    "ansible",
+    "monitoring",
+    "logging",
+    "alerting",
+    "scaling",
+    "load-balancer"
+  ],
+  "estimatedHours": 54,
+  "taskCount": 9,
+  "priorityDistribution": {
+    "high": 7,
+    "medium": 2,
+    "low": 0
+  },
+  "tasks": [
+    {
+      "title": "Design deployment architecture",
+      "description": "Design scalable deployment architecture with load balancing, auto-scaling, and high availability",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["design", "architecture", "infrastructure"]
+    },
+    {
+      "title": "Containerize application",
+      "description": "Create Docker images with multi-stage builds, optimization, and security scanning",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["docker", "containers", "build"]
+    },
+    {
+      "title": "Set up CI/CD pipeline",
+      "description": "Configure GitHub Actions/GitLab CI with build, test, and deploy stages",
+      "priority": "high",
+      "estimatedHours": 10,
+      "tags": ["ci-cd", "pipeline", "automation"]
+    },
+    {
+      "title": "Configure monitoring",
+      "description": "Set up monitoring with Prometheus, Grafana, and custom metrics dashboards",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["monitoring", "metrics", "grafana"]
+    },
+    {
+      "title": "Implement centralized logging",
+      "description": "Set up ELK stack or cloud logging with log aggregation and search",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["logging", "elk", "monitoring"]
+    },
+    {
+      "title": "Configure alerting",
+      "description": "Set up alerting rules with PagerDuty, Slack, or email notifications",
+      "priority": "high",
+      "estimatedHours": 6,
+      "tags": ["alerting", "notifications", "ops"]
+    },
+    {
+      "title": "Set up auto-scaling",
+      "description": "Configure horizontal/vertical auto-scaling based on CPU, memory, and request metrics",
+      "priority": "medium",
+      "estimatedHours": 8,
+      "tags": ["scaling", "performance", "cloud"]
+    },
+    {
+      "title": "Implement blue-green deployment",
+      "description": "Set up blue-green deployment strategy for zero-downtime releases",
+      "priority": "medium",
+      "estimatedHours": 8,
+      "tags": ["deployment", "zero-downtime", "strategy"]
+    },
+    {
+      "title": "Create disaster recovery plan",
+      "description": "Document and implement disaster recovery procedures with backup testing",
+      "priority": "high",
+      "estimatedHours": 6,
+      "tags": ["disaster-recovery", "backup", "ops"]
+    }
+  ],
+  "dependencies": [],
+  "relatedPatterns": ["api", "database", "monitoring"]
+}

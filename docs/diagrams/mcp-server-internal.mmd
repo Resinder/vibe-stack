@@ -1,0 +1,226 @@
+# ============================================================================
+# VIBE STACK - MCP Server Internal Architecture
+# ============================================================================
+# Internal component structure and data flow
+# ============================================================================
+
+```mermaid
+graph TB
+    subgraph "Entry Points"
+        STDIO[STDIO Transport<br/>AI Integration]
+        HTTP[HTTP Server<br/>REST API]
+    end
+
+    subgraph "MCP Protocol Layer"
+        SERVER[MCP Server<br/>Protocol Handler]
+        HANDLERS[Request Handlers<br/>ListTools, CallTool]
+    end
+
+    subgraph "Middleware Layer"
+        AUTH[Authentication<br/>Optional]
+        VALID[Input Validation<br/>Schema Enforcement]
+        RL[Rate Limiting<br/>Per-Endpoint]
+        LOG[Logging<br/>Structured Logs]
+        ERROR[Error Handling<br/>Graceful Failures]
+    end
+
+    subgraph "Controller Layer"
+        TASK_CTRL[Task Controller<br/>CRUD Operations]
+        BOARD_CTRL[Board Controller<br/>State Management]
+        PLAN_CTRL[Planning Controller<br/>AI Planning]
+        REPO_CTRL[Repo Controller<br/>Git Operations]
+        GITHUB_CTRL[GitHub Controller<br/>GitHub Integration]
+        FILE_CTRL[File Controller<br/>File Operations]
+        CMD_CTRL[Command Controller<br/>Shell Commands]
+        GIT_CTRL[Git Controller<br/>Git Operations]
+        CODE_CTRL[Code Quality<br/>Linting/Testing]
+        API_CTRL[API Testing<br/>HTTP Requests]
+        ENV_CTRL[Environment<br/>Config Management]
+        DOCKER_CTRL[Docker<br/>Container Operations]
+        DOC_CTRL[Documentation<br/>Doc Generation]
+    end
+
+    subgraph "Service Layer"
+        BOARD_SVC[Board Service<br/>State Management]
+        PLAN_SVC[Planning Service<br/>AI Task Planning]
+        PG_SVC[PostgreSQL Storage<br/>Async Operations]
+        CACHE[In-Memory Cache<br/>TTL: 5s]
+    end
+
+    subgraph "Core Layer"
+        BOARD[Board Model<br/>Domain Logic]
+        TASK[Task Model<br/>Domain Logic]
+    end
+
+    subgraph "External Integrations"
+        MCP_CLIENT[MCP Client Manager<br/>External Servers]
+        GITHUB[GitHub MCP<br/>Official Server]
+        POSTGRES_MCP[PostgreSQL MCP<br/>Official Server]
+        SLACK[Slack MCP<br/>Official Server]
+        SEARCH[Search MCP<br/>Brave/Tavily]
+    end
+
+    subgraph "Infrastructure"
+        PG[(PostgreSQL<br/>Primary DB)]
+        FILES[File System<br/>Bridge Files]
+        PROM[Prometheus<br/>Metrics]
+    end
+
+    %% Entry Points
+    STDIO --> SERVER
+    HTTP --> VALID
+
+    %% MCP Protocol
+    SERVER --> HANDLERS
+    HANDLERS --> AUTH
+
+    %% Middleware Pipeline
+    AUTH --> VALID
+    VALID --> RL
+    RL --> LOG
+    LOG --> ERROR
+    ERROR --> ROUTER
+
+    %% Routing
+    ROUTER{Tool Router}
+    ROUTER -->|create_task| TASK_CTRL
+    ROUTER -->|move_task| TASK_CTRL
+    ROUTER -->|update_task| TASK_CTRL
+    ROUTER -->|get_board| BOARD_CTRL
+    ROUTER -->|generate_plan| PLAN_CTRL
+    ROUTER -->|repo_ops| REPO_CTRL
+    ROUTER -->|github_ops| GITHUB_CTRL
+    ROUTER -->|file_ops| FILE_CTRL
+    ROUTER -->|command_ops| CMD_CTRL
+    ROUTER -->|git_ops| GIT_CTRL
+    ROUTER -->|code_quality| CODE_CTRL
+    ROUTER -->|api_test| API_CTRL
+    ROUTER -->|env_ops| ENV_CTRL
+    ROUTER -->|docker_ops| DOCKER_CTRL
+    ROUTER -->|docs| DOC_CTRL
+
+    %% Controller to Service
+    TASK_CTRL --> BOARD_SVC
+    BOARD_CTRL --> BOARD_SVC
+    PLAN_CTRL --> PLAN_SVC
+    PLAN_CTRL --> BOARD_SVC
+
+    %% Service to Core
+    BOARD_SVC --> BOARD
+    BOARD_SVC --> TASK
+
+    %% Service to Infrastructure
+    BOARD_SVC --> PG_SVC
+    PG_SVC --> PG
+    BOARD_SVC --> CACHE
+    BOARD_SVC --> FILES
+
+    %% External Integrations
+    ROUTER -->|external tools| MCP_CLIENT
+    MCP_CLIENT --> GITHUB
+    MCP_CLIENT --> POSTGRES_MCP
+    MCP_CLIENT --> SLACK
+    MCP_CLIENT --> SEARCH
+
+    %% Monitoring
+    TASK_CTRL -.->|metrics| PROM
+    BOARD_SVC -.->|metrics| PROM
+    PG_SVC -.->|metrics| PROM
+
+    %% Styling
+    classDef entry fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef mcp fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef middleware fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    classDef controller fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    classDef service fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef core fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef external fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+    classDef infra fill:#efebe9,stroke:#3e2723,stroke-width:2px
+
+    class STDIO,HTTP entry
+    class SERVER,HANDLERS mcp
+    class AUTH,VALID,RL,LOG,ERROR middleware
+    class TASK_CTRL,BOARD_CTRL,PLAN_CTRL,REPO_CTRL,GITHUB_CTRL,FILE_CTRL,CMD_CTRL,GIT_CTRL,CODE_CTRL,API_CTRL,ENV_CTRL,DOCKER_CTRL,DOC_CTRL controller
+    class BOARD_SVC,PLAN_SVC,PG_SVC,CACHE service
+    class BOARD,TASK core
+    class MCP_CLIENT,GITHUB,POSTGRES_MCP,SLACK,SEARCH external
+    class PG,FILES,PROM infra
+```
+
+## MCP Server Internal Architecture
+
+### Clean Architecture Layers
+
+#### 1. Entry Points Layer
+- **STDIO Transport**: AI model integration (Claude, GPT-4, etc.)
+- **HTTP Server**: REST API for external integrations
+
+#### 2. MCP Protocol Layer
+- **MCP Server**: Implements Model Context Protocol
+- **Request Handlers**: ListTools, CallTool handlers
+
+#### 3. Middleware Layer
+- **Authentication**: Optional auth for HTTP endpoints
+- **Input Validation**: Schema enforcement for all inputs
+- **Rate Limiting**: Per-endpoint rate limiting
+- **Logging**: Structured logging with context
+- **Error Handling**: Graceful error responses
+
+#### 4. Controller Layer (14 Controllers)
+- **Task Controller**: Task CRUD operations
+- **Board Controller**: Board state management
+- **Planning Controller**: AI-powered planning
+- **Repo Controller**: Repository operations
+- **GitHub Controller**: GitHub integration
+- **File Controller**: File system operations
+- **Command Controller**: Shell command execution
+- **Git Controller**: Git operations
+- **Code Quality**: Linting, testing, formatting
+- **API Testing**: HTTP request testing
+- **Environment**: Configuration management
+- **Docker**: Container operations
+- **Documentation**: Doc generation
+
+#### 5. Service Layer
+- **Board Service**: Core business logic
+- **Planning Service**: AI planning logic
+- **PostgreSQL Storage**: Async data access
+- **Cache**: In-memory caching (5s TTL)
+
+#### 6. Core Layer
+- **Board Model**: Domain entity
+- **Task Model**: Domain entity
+
+#### 7. External Integrations
+- **MCP Client Manager**: Manages external MCP servers
+- **GitHub MCP**: Official GitHub server
+- **PostgreSQL MCP**: Official PostgreSQL server
+- **Slack MCP**: Official Slack server
+- **Search MCP**: Brave/Tavily search
+
+#### 8. Infrastructure
+- **PostgreSQL**: Primary database
+- **File System**: Bridge files for sync
+- **Prometheus**: Metrics collection
+
+### Data Flow
+
+1. **Request Entry**: Via STDIO or HTTP
+2. **MCP Protocol**: Parse MCP request
+3. **Middleware Pipeline**: Auth → Validate → Rate Limit → Log
+4. **Routing**: Tool router directs to controller
+5. **Controller**: Handles business logic
+6. **Service**: Core operations
+7. **Data Access**: PostgreSQL with caching
+8. **Response**: Flows back through chain
+9. **Monitoring**: Metrics sent to Prometheus
+
+### Key Features
+
+- **Async/Await**: Non-blocking operations
+- **Connection Pooling**: Efficient DB connections
+- **Caching**: 5-second TTL for frequently accessed data
+- **Rate Limiting**: Different limits per endpoint type
+- **Error Recovery**: Graceful fallbacks
+- **Monitoring**: Comprehensive metrics
+- **Extensibility**: Easy to add new tools/controllers

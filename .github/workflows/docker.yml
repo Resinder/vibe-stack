@@ -1,0 +1,435 @@
+name: Docker CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    tags:
+      - 'v*'
+    paths:
+      - 'docker-compose.yml'
+      - 'docker-compose.*.yml'
+      - 'Dockerfile'
+      - 'mcp-server/**'
+      - '.dockerignore'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docker-compose.yml'
+      - 'docker-compose.*.yml'
+      - 'Dockerfile'
+      - 'mcp-server/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  actions: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/vibe-mcp-server
+
+jobs:
+  # =============================================================================
+  # Build Docker images
+  # =============================================================================
+  build:
+    name: Build Images
+    runs-on: ubuntu-latest
+
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./mcp-server
+          file: ./mcp-server/Dockerfile
+          target: production
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ steps.meta.outputs.version }}
+
+  # =============================================================================
+  # Security scanning with Trivy
+  # =============================================================================
+  security-scan:
+    name: Security Scan
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ needs.build.outputs.image-tag }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+        env:
+          TRIVY_NO_PROGRESS: 'true'
+          TRIVY_CACHE_DIR: '/tmp/trivy-cache'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'docker-image-security'
+
+      - name: Generate security summary
+        if: always()
+        run: |
+          echo "## Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Image: ${{ needs.build.outputs.image-tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See Security tab for detailed findings." >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # Container structure tests
+  # =============================================================================
+  test:
+    name: Container Tests
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Pull image
+        run: |
+          docker pull ${{ needs.build.outputs.image-tag }}
+
+      - name: Test container startup
+        run: |
+          echo "Testing container startup..."
+
+          # Start container
+          docker run -d --name mcp-test \
+            -p 4001:4001 \
+            -e NODE_ENV=production \
+            ${{ needs.build.outputs.image-tag }}
+
+          # Wait for startup
+          sleep 10
+
+          # Check if container is running
+          if docker ps | grep -q mcp-test; then
+            echo "✅ Container started successfully"
+          else
+            echo "❌ Container failed to start"
+            docker logs mcp-test
+            exit 1
+          fi
+
+      - name: Test health endpoint
+        run: |
+          echo "Testing health endpoint..."
+
+          # Test health endpoint
+          if curl -f http://localhost:4001/health; then
+            echo "✅ Health endpoint responding"
+          else
+            echo "❌ Health endpoint not responding"
+            exit 1
+          fi
+
+      - name: Test image size
+        run: |
+          echo "Testing image size..."
+
+          SIZE=$(docker image inspect ${{ needs.build.outputs.image-tag }} --format='{{.Size}}' | awk '{printf "%.2f MB", $1/1024/1024}')
+
+          echo "Image size: $SIZE"
+
+          # Check if size is reasonable (< 500MB)
+          SIZE_MB=$(docker image inspect ${{ needs.build.outputs.image-tag }} --format='{{.Size}}' | awk '{print int($1/1024/1024)}')
+
+          if [ "$SIZE_MB" -lt 500 ]; then
+            echo "✅ Image size is acceptable ($SIZE)"
+          else
+            echo "⚠️ Image size is large ($SIZE). Consider optimization."
+          fi
+
+      - name: Test non-root user
+        run: |
+          echo "Testing non-root user..."
+
+          # Check if container runs as non-root
+          USER_ID=$(docker run --rm ${{ needs.build.outputs.image-tag }} id -u)
+
+          if [ "$USER_ID" != "0" ]; then
+            echo "✅ Container runs as non-root user (UID: $USER_ID)"
+          else
+            echo "⚠️ Container runs as root user"
+          fi
+
+      - name: Test exposed ports
+        run: |
+          echo "Testing exposed ports..."
+
+          # Check exposed ports
+          PORTS=$(docker image inspect ${{ needs.build.outputs.image-tag }} --format='{{.Config.ExposedPorts}}')
+
+          echo "Exposed ports: $PORTS"
+
+          if echo "$PORTS" | grep -q "4001"; then
+            echo "✅ Port 4001 is exposed"
+          else
+            echo "❌ Port 4001 is not exposed"
+            exit 1
+          fi
+
+      - name: Clean up
+        if: always()
+        run: |
+          docker stop mcp-test || true
+          docker rm mcp-test || true
+
+  # =============================================================================
+  # SBOM generation
+  # =============================================================================
+  sbom:
+    name: Generate SBOM
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install Syft
+        run: |
+          wget -qO /usr/local/bin/syft https://raw.githubusercontent.com/anchore/syft/main/install.sh
+          chmod +x /usr/local/bin/syft
+
+      - name: Pull image
+        run: |
+          docker pull ${{ needs.build.outputs.image-tag }}
+
+      - name: Generate SBOM
+        run: |
+          mkdir -p sbom-results
+
+          # Generate SPDX JSON
+          syft ${{ needs.build.outputs.image-tag }} \
+            -o spdx-json \
+            --file sbom-results/mcp-server-sbom.spdx.json
+
+          # Generate CycloneDX JSON
+          syft ${{ needs.build.outputs.image-tag }} \
+            -o cyclonedx-json \
+            --file sbom-results/mcp-server-sbom.cyclonedx.json
+
+          # Generate table for review
+          syft ${{ needs.build.outputs.image-tag }} \
+            -o table \
+            --file sbom-results/mcp-server-packages.txt
+
+          # Display summary
+          echo "## SBOM Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat sbom-results/mcp-server-packages.txt >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: sbom-results/
+          retention-days: 90
+
+      - name: Attach SBOM to release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            sbom-results/mcp-server-sbom.spdx.json
+            sbom-results/mcp-server-sbom.cyclonedx.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # =============================================================================
+  # Docker Compose validation
+  # =============================================================================
+  validate-compose:
+    name: Validate Docker Compose
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate docker-compose.yml
+        run: |
+          echo "Validating docker-compose.yml..."
+          docker compose -f docker-compose.yml config > /dev/null
+          echo "✅ docker-compose.yml is valid"
+
+      - name: Validate docker-compose.monitoring.yml
+        run: |
+          echo "Validating docker-compose.monitoring.yml..."
+          docker compose -f docker-compose.monitoring.yml config > /dev/null
+          echo "✅ docker-compose.monitoring.yml is valid"
+
+      - name: Check for pinned versions
+        run: |
+          echo "Checking for pinned Docker image versions..."
+
+          if grep -r "image:.*:latest\|image:.*:main\|image:.*:master" docker-compose*.yml; then
+            echo "❌ Found unpinned Docker image tags"
+            exit 1
+          else
+            echo "✅ All Docker images are pinned"
+          fi
+
+      - name: Validate health checks
+        run: |
+          echo "Validating health checks..."
+
+          # Check if services have health checks
+          HEALTH_CHECKS=$(grep -c "healthcheck:" docker-compose.yml || echo 0)
+
+          echo "Found $HEALTH_CHECKS health check(s)"
+
+          if [ "$HEALTH_CHECKS" -gt 0 ]; then
+            echo "✅ Health checks are defined"
+          else
+            echo "⚠️ No health checks found"
+          fi
+
+  # =============================================================================
+  # Image size comparison
+  # =============================================================================
+  size-check:
+    name: Image Size Check
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Pull image
+        run: |
+          docker pull ${{ needs.build.outputs.image-tag }}
+
+      - name: Get image size
+        id: size
+        run: |
+          SIZE_BYTES=$(docker image inspect ${{ needs.build.outputs.image-tag }} --format='{{.Size}}')
+          SIZE_MB=$(echo "scale=2; $SIZE_BYTES / 1024 / 1024" | bc)
+
+          echo "size-mb=$SIZE_MB" >> $GITHUB_OUTPUT
+          echo "size-bytes=$SIZE_BYTES" >> $GITHUB_OUTPUT
+
+          echo "## Image Size Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Size:** $SIZE_MB MB" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Compare with benchmarks
+          if (( $(echo "$SIZE_MB < 100" | bc -l) )); then
+            echo "✅ Excellent (< 100 MB)" >> $GITHUB_STEP_SUMMARY
+          elif (( $(echo "$SIZE_MB < 250" | bc -l) )); then
+            echo "✅ Good (< 250 MB)" >> $GITHUB_STEP_SUMMARY
+          elif (( $(echo "$SIZE_MB < 500" | bc -l) )); then
+            echo "⚠️ Acceptable (< 500 MB)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Large (> 500 MB) - Consider optimization" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # =============================================================================
+  # Final summary
+  # =============================================================================
+  summary:
+    name: Build Summary
+    needs: [build, security-scan, test, sbom, validate-compose, size-check]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate build summary
+        run: |
+          echo "# Docker CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Scan | ${{ needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped' ? '✅ Passed' : '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Container Tests | ${{ needs.test.result == 'success' ? '✅ Passed' : '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SBOM Generation | ${{ needs.sbom.result == 'success' ? '✅ Passed' : '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Compose Validation | ${{ needs.validate-compose.result == 'success' ? '✅ Passed' : '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Size Check | ${{ needs.size-check.result == 'success' ? '✅ Passed' : '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.build.outputs.image-tag }}" != "" ]; then
+            echo "## Image" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Tag:** \`${{ needs.build.outputs.image-tag }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Digest:** \`${{ needs.build.outputs.image-digest }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "## Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Security scan results: See Security tab" >> $GITHUB_STEP_SUMMARY
+          echo "- SBOM: Available in artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Image: Pushed to Container Registry" >> $GITHUB_STEP_SUMMARY

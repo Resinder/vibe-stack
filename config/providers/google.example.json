@@ -1,0 +1,56 @@
+{
+  "_comment": "Google Gemini Configuration",
+  "_documentation": "https://ai.google.dev/docs",
+
+  "provider": "google",
+  "enabled": false,
+
+  "api": {
+    "baseUrl": "https://generativelanguage.googleapis.com/v1",
+    "apiKey": "${GOOGLE_API_KEY}",
+    "version": "v1",
+    "timeout": 120000
+  },
+
+  "models": {
+    "haiku": {
+      "name": "gemini-2.0-flash-exp",
+      "alias": "fast",
+      "contextWindow": 1000000,
+      "maxTokens": 8192
+    },
+    "sonnet": {
+      "name": "gemini-1.5-pro",
+      "alias": "balanced",
+      "contextWindow": 1000000,
+      "maxTokens": 8192
+    },
+    "opus": {
+      "name": "gemini-1.5-pro",
+      "alias": "quality",
+      "contextWindow": 1000000,
+      "maxTokens": 8192
+    }
+  },
+
+  "defaults": {
+    "model": "sonnet",
+    "temperature": 0.7,
+    "topP": 0.9,
+    "maxTokens": 4096
+  },
+
+  "capabilities": {
+    "codeGeneration": "excellent",
+    "chineseSupport": "excellent",
+    "multimodal": true,
+    "streaming": true
+  },
+
+  "pricing": {
+    "currency": "USD",
+    "haiku": { "input": 0.00, "output": 0.00, "unit": "1M", "note": "Free up to limits" },
+    "sonnet": { "input": 1.25, "output": 5.00, "unit": "1M" },
+    "opus": { "input": 1.25, "output": 5.00, "unit": "1M" }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "_comment": "Memory MCP Server Configuration - Official",
+  "_version": "1.0.0",
+  "name": "memory",
+  "enabled": false,
+  "prefix": "memory",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-memory"],
+  "env": {},
+  "description": "Official Memory MCP server for persistent context and memory management",
+  "tools": [
+    "create_entities",
+    "create_memories",
+    "search_memories",
+    "get_entities",
+    "get_memories",
+    "delete_memory",
+    "update_memory"
+  ],
+  "features": {
+    "authentication": "No API key required",
+    "storage": "Local file-based storage (JSON)",
+    "persistence": "Persistent across sessions",
+    "search": "Vector-like semantic search"
+  },
+  "configuration": {
+    "storage_path": "./data/memory",
+    "max_memories": 10000,
+    "retention_days": 365
+  },
+  "use_cases": {
+    "context": "Remember context across conversations",
+    "preferences": "Store user preferences and settings",
+    "history": "Maintain conversation history",
+    "learning": "Learn from user interactions",
+    "personalization": "Personalized AI responses"
+  },
+  "entities_example": {
+    "user": "User preferences, contact info, custom settings",
+    "project": "Project details, requirements, stakeholders",
+    "technical": "Technical decisions, architecture choices",
+    "business": "Business rules, constraints, requirements"
+  }
+}

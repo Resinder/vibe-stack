@@ -1,0 +1,299 @@
+name: Docker Image Auto-Update
+
+on:
+  # Trigger on Renovate PRs
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docker-compose.yml'
+      - 'docker-compose.monitoring.yml'
+      - 'version.json'
+      - 'Dockerfile'
+      - 'mcp-server/Dockerfile'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # Test Docker image updates
+  test-docker-updates:
+    name: Test Docker Image Updates
+    if: |
+      github.actor == 'renovate[bot]' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        compose-file:
+          - docker-compose.yml
+          - docker-compose.monitoring.yml
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Parse Docker images from compose file
+        id: parse-images
+        run: |
+          echo "Analyzing ${{ matrix.compose-file }}..."
+
+          # Extract image names and tags using grep and awk
+          IMAGES=$(grep -E "^\s+image:" "${{ matrix.compose-file }}" | awk '{print $2}' | sort | uniq)
+
+          # Write to file for next step
+          echo "$IMAGES" > /tmp/docker-images.txt
+
+          # Output for debugging
+          echo "Found images:"
+          cat /tmp/docker-images.txt
+
+          # Count images
+          IMAGE_COUNT=$(wc -l < /tmp/docker-images.txt)
+          echo "image-count=$IMAGE_COUNT" >> $GITHUB_OUTPUT
+
+      - name: Verify Docker images exist
+        id: verify-images
+        run: |
+          echo "Verifying Docker images exist in registries..."
+
+          SUCCESS=true
+          while IFS= read -r image; do
+            if [ -n "$image" ]; then
+              echo "Checking: $image"
+
+              # Pull image to verify it exists
+              if docker pull "$image" > /dev/null 2>&1; then
+                echo "✅ $image - Available"
+              else
+                echo "❌ $image - Not found"
+                SUCCESS=false
+              fi
+            fi
+          done < /tmp/docker-images.txt
+
+          if [ "$SUCCESS" = false ]; then
+            echo "Some images are not available!"
+            exit 1
+          fi
+
+      - name: Validate Docker Compose syntax
+        run: |
+          echo "Validating ${{ matrix.compose-file }} syntax..."
+
+          docker compose -f "${{ matrix.compose-file }}" config > /dev/null
+          echo "✅ ${{ matrix.compose-file }} syntax is valid"
+
+      - name: Check for version conflicts
+        id: check-conflicts
+        run: |
+          echo "Checking for version conflicts..."
+
+          # Compare with version.json
+          if [ "${{ matrix.compose-file }}" = "docker-compose.yml" ]; then
+            # Extract versions from compose file
+            NODE_VERSION=$(grep -A1 "image: node:" "${{ matrix.compose-file }}" | head -1 | awk '{print $2}' | cut -d':' -f2)
+            POSTGRES_VERSION=$(grep -A1 "image: postgres:" "${{ matrix.compose-file }}" | head -1 | awk '{print $2}' | cut -d':' -f2)
+
+            echo "Compose file versions:"
+            echo "  Node: $NODE_VERSION"
+            echo "  PostgreSQL: $POSTGRES_VERSION"
+
+            # Check against version.json
+            if [ -n "$NODE_VERSION" ]; then
+              if grep -q "\"tag\": \"$NODE_VERSION\"" version.json; then
+                echo "✅ Node version matches version.json"
+              else
+                echo "⚠️ Node version in compose file doesn't match version.json"
+              fi
+            fi
+          fi
+
+      - name: Test compose up (dry-run)
+        run: |
+          echo "Testing compose configuration (dry-run)..."
+
+          # Use docker compose config to validate the entire configuration
+          docker compose -f "${{ matrix.compose-file }}" config --no-interpolate > /tmp/compose-config.yml
+
+          echo "✅ Compose configuration validated successfully"
+
+          # Show service count
+          SERVICE_COUNT=$(grep -c "^\s*image:" /tmp/compose-config.yml || echo 0)
+          echo "Services configured: $SERVICE_COUNT"
+
+      - name: Check for security advisories
+        id: security-check
+        run: |
+          echo "Checking for known vulnerabilities in Docker images..."
+
+          # Install trivy
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+          # Scan each image
+          CRITICAL_FOUND=false
+          while IFS= read -r image; do
+            if [ -n "$image" ]; then
+              echo "Scanning: $image"
+
+              # Run trivy scan (only check for CRITICAL vulnerabilities)
+              RESULT=$(trivy image --severity CRITICAL --no-progress --format json "$image" 2>/dev/null || echo '{}')
+
+              # Count critical vulnerabilities
+              CRITICAL_COUNT=$(echo "$RESULT" | jq '.Results[]?.Vulnerabilities // [] | length' 2>/dev/null || echo 0)
+
+              if [ "$CRITICAL_COUNT" -gt 0 ]; then
+                echo "⚠️ $image has $CRITICAL_COUNT CRITICAL vulnerabilities"
+                CRITICAL_FOUND=true
+              else
+                echo "✅ $image - No critical vulnerabilities"
+              fi
+            fi
+          done < /tmp/docker-images.txt
+
+          if [ "$CRITICAL_FOUND" = true ]; then
+            echo "::warning::Some Docker images have critical vulnerabilities"
+          fi
+
+  # Verify MCP server Dockerfile
+  test-mcp-dockerfile:
+    name: Test MCP Server Dockerfile
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Check if MCP Dockerfile exists
+        id: check-dockerfile
+        run: |
+          if [ -f "mcp-server/Dockerfile" ]; then
+            echo "dockerfile-exists=true" >> $GITHUB_OUTPUT
+            echo "✅ MCP Server Dockerfile found"
+          else
+            echo "dockerfile-exists=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No MCP Server Dockerfile"
+          fi
+
+      - name: Build MCP Server image
+        if: steps.check-dockerfile.outputs.dockerfile-exists == 'true'
+        run: |
+          echo "Building MCP Server Docker image..."
+          cd mcp-server
+
+          docker build -t vibe-mcp-server:test .
+          echo "✅ MCP Server image built successfully"
+
+      - name: Test MCP Server image
+        if: steps.check-dockerfile.outputs.dockerfile-exists == 'true'
+        run: |
+          echo "Testing MCP Server container..."
+
+          # Test if container starts
+          docker run --rm -d --name mcp-test vibe-mcp-server:test || exit 1
+
+          # Wait for startup
+          sleep 5
+
+          # Check if container is running
+          if docker ps | grep -q mcp-test; then
+            echo "✅ MCP Server container started successfully"
+            docker stop mcp-test
+          else
+            echo "❌ MCP Server container failed to start"
+            docker logs mcp-test || true
+            exit 1
+          fi
+
+      - name: Analyze MCP Server image size
+        if: steps.check-dockerfile.outputs.dockerfile-exists == 'true'
+        run: |
+          echo "Analyzing MCP Server image size..."
+
+          SIZE=$(docker images vibe-mcp-server:test --format "{{.Size}}")
+          echo "Image size: $SIZE"
+
+          # Compare with typical Node.js image sizes (should be < 1GB)
+          SIZE_MB=$(docker images vibe-mcp-server:test --format "{{.Size}}" | grep -oP '\d+(\.\d+)?(?= MB)' || echo 0)
+
+          if (( $(echo "$SIZE_MB < 1000" | bc -l) )); then
+            echo "✅ Image size is reasonable"
+          else
+            echo "::warning::Image size is large ($SIZE). Consider multi-stage build optimization."
+          fi
+
+  # Comment on PR with results
+  comment-results:
+    name: Comment Test Results
+    needs: [test-docker-updates, test-mcp-dockerfile]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Docker Update Test Results')
+            );
+
+            const emoji = '${{ needs.test-docker-updates.result == "success" && needs.test-mcp-dockerfile.result != "failure" ? "✅" : "⚠️" }}';
+
+            const commentBody = `### ${emoji} Docker Update Test Results
+
+            **Tests:**
+            - Docker Compose validation: ${{ needs.test-docker-updates.result == 'success' && '✅ Passed' || '❌ Failed' }}
+            - MCP Server Dockerfile: ${{ needs.test-mcp-dockerfile.result == 'success' || needs.test-mcp-dockerfile.result == 'skipped' ? '✅ Passed' || '❌ Failed' }}
+            - Image availability check: ${{ needs.test-docker-updates.result == 'success' ? '✅ All images available' : '⚠️ Some images not found' }}
+            - Security scan: Completed
+
+            **Summary:**
+            - All Docker image versions verified
+            - Compose files validated
+            - ${{ needs.test-docker-updates.result == 'success' && needs.test-mcp-dockerfile.result != 'failure' ? '✅ Ready for review and merge' : '⚠️ Please review the failures' }}
+
+            **Next Steps:**
+            - Review the Docker image version changes
+            - Check security scan results in logs
+            - Test locally if needed
+            - Approve and merge if everything looks good
+
+            ---
+            *Automated by GitHub Actions*`;
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+            }

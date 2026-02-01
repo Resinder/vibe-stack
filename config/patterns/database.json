@@ -1,0 +1,92 @@
+{
+  "_comment": "Database & Data Management pattern for task generation",
+  "name": "database",
+  "displayName": "Database & Data Management",
+  "description": "Complete database setup with schema design, migrations, ORM integration, and data management",
+  "keywords": [
+    "database",
+    "db",
+    "sql",
+    "nosql",
+    "postgres",
+    "postgresql",
+    "mysql",
+    "mongodb",
+    "redis",
+    "schema",
+    "migration",
+    "orm",
+    "sequelize",
+    "typeorm",
+    "prisma",
+    "query",
+    "index",
+    "transaction",
+    "backup",
+    "replication",
+    "sharding",
+    "data",
+    "storage",
+    "persistence"
+  ],
+  "estimatedHours": 47,
+  "taskCount": 7,
+  "priorityDistribution": {
+    "high": 5,
+    "medium": 2,
+    "low": 0
+  },
+  "tasks": [
+    {
+      "title": "Design database schema",
+      "description": "Design normalized database schema with tables, relationships, indexes, and constraints",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["design", "schema", "database"]
+    },
+    {
+      "title": "Set up database server",
+      "description": "Install and configure database server (PostgreSQL/MySQL/MongoDB) with connection pooling",
+      "priority": "high",
+      "estimatedHours": 6,
+      "tags": ["setup", "infrastructure", "database"]
+    },
+    {
+      "title": "Create migration system",
+      "description": "Implement database migration system for version control and schema changes",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["migration", "version-control", "database"]
+    },
+    {
+      "title": "Integrate ORM/Query builder",
+      "description": "Set up ORM (Sequelize, TypeORM, Prisma) or query builder for database operations",
+      "priority": "high",
+      "estimatedHours": 10,
+      "tags": ["orm", "query", "backend"]
+    },
+    {
+      "title": "Implement data seeding",
+      "description": "Create seed data for development and testing with realistic data sets",
+      "priority": "medium",
+      "estimatedHours": 6,
+      "tags": ["seeding", "testing", "data"]
+    },
+    {
+      "title": "Add backup & recovery",
+      "description": "Implement automated database backups with point-in-time recovery",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["backup", "recovery", "infrastructure"]
+    },
+    {
+      "title": "Set up read replicas",
+      "description": "Configure read replicas for scaling and performance optimization",
+      "priority": "medium",
+      "estimatedHours": 6,
+      "tags": ["scaling", "performance", "database"]
+    }
+  ],
+  "dependencies": [],
+  "relatedPatterns": ["api", "authentication", "deployment"]
+}

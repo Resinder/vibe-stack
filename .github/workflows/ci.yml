@@ -57,13 +57,13 @@ jobs:
       - name: Validate shell scripts
         run: |
           echo "Checking shell script syntax..."
-          if [ -f dev-server.sh ]; then
-            sh -n dev-server.sh
-            echo "✓ dev-server.sh syntax valid"
+          if [ -f scripts/dev/dev-server.sh ]; then
+            sh -n scripts/dev/dev-server.sh
+            echo "✓ scripts/dev/dev-server.sh syntax valid"
           fi
-          if [ -f init.sh ]; then
-            sh -n init.sh
-            echo "✓ init.sh syntax valid"
+          if [ -f scripts/setup/init.sh ]; then
+            sh -n scripts/setup/init.sh
+            echo "✓ scripts/setup/init.sh syntax valid"
           fi
 
       - name: Check required files exist
@@ -134,7 +134,7 @@ jobs:
         run: |
           echo "Verifying script permissions..."
           # Shell scripts should be executable (or have executable example)
-          scripts=("dev-server.sh" "init.sh")
+          scripts=("scripts/dev/dev-server.sh" "scripts/setup/init.sh" "scripts/operations/evolve.sh" "scripts/operations/test-harness.sh")
           for script in "${scripts[@]}"; do
             if [ -f "$script" ]; then
               if [ -x "$script" ]; then
@@ -161,7 +161,7 @@ jobs:
     needs: validation
     strategy:
       matrix:
-        service: [vibe-kanban, code-server]
+        service: [vibe-kanban, code-server, mcp-server]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -179,6 +179,52 @@ jobs:
         run: |
           echo "Image size for ${{ matrix.service }}:"
           docker images | grep ${{ matrix.service }} || docker images | grep node | head -1
+
+  # ============================================================================
+  # TEST JOB - Run test suite
+  # ============================================================================
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    needs: docker-build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./mcp-server
+        run: npm ci
+
+      - name: Run tests
+        working-directory: ./mcp-server
+        run: npm test
+
+      - name: Generate coverage report
+        working-directory: ./mcp-server
+        run: npm run test:coverage
+        continue-on-error: true
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./mcp-server/coverage/lcov.info
+          flags: mcp-server
+          name: codecov-umbrella
+        continue-on-error: true
+
+      - name: Archive test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            mcp-server/coverage/
+            mcp-server/test-results/
+        if: always()
 
   # ============================================================================
   # DOCUMENTATION JOB - Validate documentation
@@ -203,7 +249,7 @@ jobs:
       - name: Verify documentation files exist
         run: |
           echo "Checking documentation files..."
-          docs=("README.md" "HELPER.md" "LICENSE")
+          docs=("README.md" "docs/HELPER.md" "LICENSE")
           missing=()
           for doc in "${docs[@]}"; do
             if [ ! -f "$doc" ]; then
@@ -264,7 +310,7 @@ jobs:
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [validation, security, docker-build, documentation, code-quality]
+    needs: [validation, security, docker-build, documentation, code-quality, test]
     if: always()
     steps:
       - name: Check job results
@@ -275,9 +321,11 @@ jobs:
           echo "  Docker Build: ${{ needs.docker-build.result }}"
           echo "  Documentation: ${{ needs.documentation.result }}"
           echo "  Code Quality: ${{ needs.code-quality.result }}"
+          echo "  Test Suite: ${{ needs.test.result }}"
 
           if [ "${{ needs.validation.result }}" != "success" ] || \
-             [ "${{ needs.docker-build.result }}" != "success" ]; then
+             [ "${{ needs.docker-build.result }}" != "success" ] || \
+             [ "${{ needs.test.result }}" != "success" ]; then
             echo "::error::CI pipeline failed"
             exit 1
           fi

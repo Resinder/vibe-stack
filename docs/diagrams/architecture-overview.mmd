@@ -1,0 +1,120 @@
+# ============================================================================
+# VIBE STACK - Architecture Overview
+# ============================================================================
+# High-level system architecture diagram
+# ============================================================================
+
+```mermaid
+graph TB
+    subgraph "User Layer"
+        UI[Open WebUI<br/>AI Chat Interface]
+        VSCode[code-server<br/>Browser-based IDE]
+        CLI[Claude Code CLI]
+    end
+
+    subgraph "API Gateway Layer"
+        MCP[MCP Server<br/>Port 4001]
+        HTTP[HTTP API<br/>Port 4001]
+    end
+
+    subgraph "Application Layer"
+        TS[Task Service<br/>CRUD Operations]
+        BS[Board Service<br/>State Management]
+        PLS[Planning Service<br/>AI Task Planning]
+        TCS[Tool Controller<br/>Router]
+    end
+
+    subgraph "Data Layer"
+        PG[(PostgreSQL<br/>Primary Database)]
+        BRIDGE[Bridge File<br/>JSON Sync]
+    end
+
+    subgraph "External Integrations"
+        GH[GitHub MCP]
+        SLACK[Slack MCP]
+        SEARCH[Search MCP]
+    end
+
+    subgraph "Monitoring"
+        PROM[Prometheus<br/>Metrics]
+        GRAF[Grafana<br/>Dashboards]
+        AM[AlertManager<br/>Alerts]
+    end
+
+    %% User Layer Connections
+    UI -->|AI Chat| MCP
+    VSCode -->|HTTP| HTTP
+    CLI -->|STDIO| MCP
+
+    %% API Gateway Connections
+    MCP --> TCS
+    HTTP --> TCS
+
+    %% Application Layer Connections
+    TCS --> TS
+    TCS --> PLS
+    TS --> BS
+    PLS --> TS
+    BS --> PG
+
+    %% Data Layer Connections
+    PG <-->|Read/Write| BS
+    BRIDGE <-->|Sync| BS
+
+    %% External Integrations
+    TCS -->|External Tools| GH
+    TCS -->|Notifications| SLACK
+    TCS -->|Web Search| SEARCH
+
+    %% Monitoring
+    MCP -->|Metrics| PROM
+    HTTP -->|Metrics| PROM
+    PROM --> GRAF
+    PROM --> AM
+
+    %% Styling
+    classDef userLayer fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef apiLayer fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef appLayer fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    classDef dataLayer fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef externalLayer fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef monitoringLayer fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+
+    class UI,VSCode,CLI userLayer
+    class MCP,HTTP apiLayer
+    class TS,BS,PLS,TCS appLayer
+    class PG,BRIDGE dataLayer
+    class GH,SLACK,SEARCH externalLayer
+    class PROM,GRAF,AM monitoringLayer
+```
+
+## Architecture Overview
+
+### User Layer
+- **Open WebUI**: AI chat interface for interacting with Vibe Stack
+- **code-server**: Browser-based VS Code for development
+- **Claude Code CLI**: Command-line interface for AI assistance
+
+### API Gateway Layer
+- **MCP Server**: Model Context Protocol server for AI integration (STDIO)
+- **HTTP API**: RESTful API for external integrations
+
+### Application Layer
+- **Task Service**: Manages task CRUD operations
+- **Board Service**: Manages board state and persistence
+- **Planning Service**: AI-powered task planning and decomposition
+- **Tool Controller**: Routes tool calls to appropriate handlers
+
+### Data Layer
+- **PostgreSQL**: Primary database for state management
+- **Bridge File**: JSON file for real-time synchronization with Vibe-Kanban
+
+### External Integrations
+- **GitHub MCP**: GitHub operations via official MCP server
+- **Slack MCP**: Notifications and updates via Slack
+- **Search MCP**: Web search capabilities (Brave/Tavily)
+
+### Monitoring
+- **Prometheus**: Metrics collection and storage
+- **Grafana**: Visualization and dashboards
+- **AlertManager**: Alert routing and management

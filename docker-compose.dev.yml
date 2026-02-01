@@ -1,0 +1,209 @@
+# =============================================================================
+# Vibe Stack - Development Docker Compose Override
+# =============================================================================
+#
+# This file provides development-specific overrides for the main docker-compose.yml
+# It enables:
+# - Hot-reload for all services
+# - Debug ports exposed
+# - Source code mounted as volumes
+# - Debug logging enabled
+# - Development database seeds
+# - Lower resource limits
+# - Test fixtures pre-loaded
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# Or use the Makefile:
+#   make dev-up
+#
+# =============================================================================
+
+services:
+  # =============================================================================
+  # VIBE-KANBAN SERVICE (Development Mode)
+  # =============================================================================
+  vibe-kanban:
+    # Development environment
+    environment:
+      - NODE_ENV=development
+      - DEBUG=vibe:*
+      - LOG_LEVEL=debug
+
+    # Source code mounts for hot-reload
+    volumes:
+      # Mount entire project for live development
+      - ./mcp-server:/app:rw
+      # Override data directories with local development data
+      - ./dev-data/vibe-kanban:/home/node/.local/share/vibe-kanban:rw
+
+    # Expose Node.js debugger
+    ports:
+      - "4000:4000"      # Main port (from base)
+      - "9229:9229"      # Node.js debugger
+
+    # Disable resource limits for better performance
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+    # Enable development features
+    command:
+      - sh
+      - -c
+      - |
+        if [ -f /app/package.json ]; then
+          echo "Starting Vibe-Kanban in development mode..."
+          # Install dependencies if needed
+          if [ ! -d /app/node_modules ]; then
+            npm install
+          fi
+          # Start with nodemon for hot-reload
+          npx nodemon index.js
+        else
+          echo "No package.json found, starting default..."
+          node index.js
+        fi
+
+  # =============================================================================
+  # CODE-SERVER SERVICE (Development Mode)
+  # =============================================================================
+  code-server:
+    # Development environment
+    environment:
+      - DOCKER_USER=root
+
+    # Source code mounts
+    volumes:
+      # Shared workspace (from base)
+      - ./repos:/home/coder/repos
+      # Additional development tools
+      - ./dev-data/code-server/settings:/home/coder/.local/share/code-server:rw
+
+    # No additional resource constraints needed for development
+
+  # =============================================================================
+  # OPEN WEBUI SERVICE (Development Mode)
+  # =============================================================================
+  open-webui:
+    # Development environment
+    environment:
+      - ENABLE_OLLAMA_API=true
+      - DEBUG=true
+
+    # Development data
+    volumes:
+      - ./dev-data/open-webui:/app/backend/data:rw
+
+    # Relaxed resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+
+  # =============================================================================
+  # MCP SERVER (Development Mode)
+  # =============================================================================
+  mcp-server:
+    # Development environment
+    environment:
+      - NODE_ENV=development
+      - DEBUG=mcp:*
+      - LOG_LEVEL=debug
+      - HOT_RELOAD=true
+
+    # Source code mounts for hot-reload
+    volumes:
+      # Mount entire MCP server for live development
+      - ./mcp-server:/app:rw
+      # Custom panel for Open WebUI (from base)
+      - ./services/open-webui-custom:/custom:ro
+      # Development data
+      - ./dev-data/mcp-server:/app/data:rw
+
+    # Expose Node.js debugger
+    ports:
+      - "4001:4001"      # Main port (from base)
+      - "9230:9230"      # Node.js debugger
+
+    # Relaxed resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+    # Enable development features
+    command:
+      - sh
+      - -c
+      - |
+        if [ -f /app/package.json ]; then
+          echo "Starting MCP Server in development mode..."
+          # Install dependencies if needed
+          if [ ! -d /app/node_modules ]; then
+            npm install
+          fi
+          # Start with nodemon for hot-reload
+          npx nodemon index.js
+        else
+          echo "No package.json found, starting default..."
+          node index.js
+        fi
+
+  # =============================================================================
+  # POSTGRESQL SERVICE (Development Mode)
+  # =============================================================================
+  postgres:
+    # Development environment
+    environment:
+      - POSTGRES_HOSTNAME_METHOD=hostname
+
+    # Development data with persistence
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/docker/postgres-init:/docker-entrypoint-initdb.d:ro
+      # Seed data for development
+      - ./dev-data/postgres-seed:/seed-data:ro
+
+    # Expose for external database tools
+    ports:
+      - "5432:5432"      # PostgreSQL (from base)
+
+    # Relaxed resource limits for development
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+
+# =============================================================================
+# DEVELOPMENT VOLUMES
+# =============================================================================
+volumes:
+  # Development data for Vibe-Kanban
+  vibe-dev-data:
+    driver: local
+
+  # Development data for code-server
+  code-server-dev:
+    driver: local
+
+  # Development data for Open WebUI
+  open-webui-dev:
+    driver: local
+
+  # Development data for MCP Server
+  mcp-server-dev:
+    driver: local
+
+  # Seed data for PostgreSQL
+  postgres-seed:
+    driver: local

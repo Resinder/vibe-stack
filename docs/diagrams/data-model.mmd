@@ -1,0 +1,120 @@
+# ============================================================================
+# VIBE STACK - Data Model
+# ============================================================================
+# Entity Relationship Diagram for PostgreSQL schema
+# ============================================================================
+
+```mermaid
+erDiagram
+    %% Boards Table
+    BOARDS {
+        uuid id PK
+        string name
+        text description
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% Tasks Table
+    TASKS {
+        uuid id PK
+        uuid board_id FK
+        string title
+        text description
+        string lane
+        string priority
+        string status
+        decimal estimated_hours
+        jsonb tags
+        jsonb metadata
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% Audit Log Table
+    AUDIT_LOG {
+        uuid id PK
+        uuid task_id FK
+        uuid board_id FK
+        string action
+        jsonb old_values
+        jsonb new_values
+        string changed_by
+        timestamp changed_at
+    }
+
+    %% Relationships
+    BOARDS ||--o{ TASKS : "contains"
+    BOARDS ||--o{ AUDIT_LOG : "tracks"
+    TASKS ||--o{ AUDIT_LOG : "logged in"
+
+    %% Constraints
+    TASKS {
+        @@lane_check {backlog, todo, in_progress, done, recovery}
+        @@priority_check {low, medium, high, critical}
+        @@title_length {1-200}
+        @@max_estimated_hours {1000}
+    }
+```
+
+## Database Schema
+
+### Boards Table
+Stores board metadata and configuration.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Primary key |
+| name | VARCHAR(255) | Board name |
+| description | TEXT | Board description |
+| created_at | TIMESTAMP | Creation timestamp |
+| updated_at | TIMESTAMP | Last update timestamp |
+
+### Tasks Table
+Stores all task data with full audit trail.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Primary key |
+| board_id | UUID | Foreign key to boards |
+| title | VARCHAR(200) | Task title (1-200 chars) |
+| description | TEXT | Task description |
+| lane | VARCHAR(50) | Current lane (backlog, todo, in_progress, done, recovery) |
+| priority | VARCHAR(20) | Priority (low, medium, high, critical) |
+| status | VARCHAR(50) | Task status |
+| estimated_hours | DECIMAL | Estimated hours (0-1000) |
+| tags | JSONB | Task tags array |
+| metadata | JSONB | Additional metadata |
+| created_at | TIMESTAMP | Creation timestamp |
+| updated_at | TIMESTAMP | Last update timestamp |
+
+### Audit Log Table
+Tracks all changes to tasks for compliance and debugging.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Primary key |
+| task_id | UUID | Foreign key to tasks (nullable) |
+| board_id | UUID | Foreign key to boards |
+| action | VARCHAR(50) | Action type (create, update, move, delete) |
+| old_values | JSONB | Previous values |
+| new_values | JSONB | New values |
+| changed_by | VARCHAR(255) | User/system that made change |
+| changed_at | TIMESTAMP | Change timestamp |
+
+### Constraints
+- **Lane Check**: Only valid lane values allowed
+- **Priority Check**: Only valid priority values allowed
+- **Title Length**: Title must be 1-200 characters
+- **Max Estimated Hours**: Cannot exceed 1000 hours
+
+### Indexes
+- `idx_tasks_board_id`: Fast board queries
+- `idx_tasks_lane`: Fast lane filtering
+- `idx_tasks_priority`: Fast priority filtering
+- `idx_tasks_tags`: GIN index for tag searches
+- `idx_audit_log_task_id`: Audit trail queries
+
+### Triggers
+- **update_updated_at**: Auto-update timestamp on changes
+- **log_task_changes**: Auto-log all task changes to audit log

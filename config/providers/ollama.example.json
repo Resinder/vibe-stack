@@ -1,0 +1,56 @@
+{
+  "_comment": "Ollama Local Models Configuration",
+  "_documentation": "https://ollama.com/docs",
+
+  "provider": "ollama",
+  "enabled": false,
+
+  "api": {
+    "baseUrl": "http://localhost:11434/v1",
+    "apiKey": "",
+    "version": "v1",
+    "timeout": 300000
+  },
+
+  "models": {
+    "haiku": {
+      "name": "llama3:8b",
+      "alias": "fast",
+      "contextWindow": 8192,
+      "maxTokens": 4096
+    },
+    "sonnet": {
+      "name": "llama3:70b",
+      "alias": "balanced",
+      "contextWindow": 8192,
+      "maxTokens": 4096
+    },
+    "opus": {
+      "name": "codellama:34b",
+      "alias": "quality",
+      "contextWindow": 16384,
+      "maxTokens": 4096
+    }
+  },
+
+  "defaults": {
+    "model": "sonnet",
+    "temperature": 0.7,
+    "topP": 0.9,
+    "maxTokens": 4096
+  },
+
+  "capabilities": {
+    "codeGeneration": "good",
+    "chineseSupport": "fair",
+    "multimodal": false,
+    "streaming": true
+  },
+
+  "pricing": {
+    "currency": "USD",
+    "haiku": { "input": 0.00, "output": 0.00, "unit": "1M", "note": "Hardware costs only" },
+    "sonnet": { "input": 0.00, "output": 0.00, "unit": "1M", "note": "Hardware costs only" },
+    "opus": { "input": 0.00, "output": 0.00, "unit": "1M", "note": "Hardware costs only" }
+  }
+}

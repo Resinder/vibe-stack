@@ -1,0 +1,56 @@
+{
+  "_comment": "Anthropic Claude Configuration",
+  "_documentation": "https://docs.anthropic.com/claude/reference/getting-started-with-the-api",
+
+  "provider": "anthropic",
+  "enabled": true,
+
+  "api": {
+    "baseUrl": "https://api.anthropic.com",
+    "apiKey": "${ANTHROPIC_API_KEY}",
+    "version": "2023-06-01",
+    "timeout": 120000
+  },
+
+  "models": {
+    "haiku": {
+      "name": "claude-3-haiku",
+      "alias": "fast",
+      "contextWindow": 200000,
+      "maxTokens": 8192
+    },
+    "sonnet": {
+      "name": "claude-3-5-sonnet",
+      "alias": "balanced",
+      "contextWindow": 200000,
+      "maxTokens": 8192
+    },
+    "opus": {
+      "name": "claude-opus",
+      "alias": "quality",
+      "contextWindow": 200000,
+      "maxTokens": 4096
+    }
+  },
+
+  "defaults": {
+    "model": "sonnet",
+    "temperature": 0.7,
+    "topP": 0.9,
+    "maxTokens": 4096
+  },
+
+  "capabilities": {
+    "codeGeneration": "excellent",
+    "chineseSupport": "good",
+    "multimodal": false,
+    "streaming": true
+  },
+
+  "pricing": {
+    "currency": "USD",
+    "haiku": { "input": 0.25, "output": 1.25, "unit": "1M" },
+    "sonnet": { "input": 3.0, "output": 15.0, "unit": "1M" },
+    "opus": { "input": 15.0, "output": 75.0, "unit": "1M" }
+  }
+}

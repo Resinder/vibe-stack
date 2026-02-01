@@ -1,0 +1,103 @@
+# ============================================================================
+# VIBE STACK - Component Interaction Flow
+# ============================================================================
+# Detailed sequence diagram showing component interactions
+# ============================================================================
+
+```mermaid
+sequenceDiagram
+    participant User as User/AI
+    participant UI as Open WebUI
+    participant MCP as MCP Server
+    participant Auth as Auth Middleware
+    participant RL as Rate Limiter
+    participant Router as Tool Router
+    participant Ctrl as Task Controller
+    participant Service as Board Service
+    participant PG as PostgreSQL
+    participant Bridge as Bridge File
+
+    %% Task Creation Flow
+    User->>UI: Create Task Request
+    UI->>MCP: create_task(title, lane, priority)
+
+    Note over MCP: Request Processing
+
+    MCP->>Auth: Validate Request
+    Auth-->>MCP: Authenticated
+
+    MCP->>RL: Check Rate Limit
+    RL-->>MCP: Within Limits
+
+    MCP->>Router: Route to create_task
+    Router->>Ctrl: create_task(taskData)
+
+    Note over Ctrl: Business Logic
+
+    Ctrl->>Service: addTask(task)
+    Service->>PG: INSERT INTO tasks
+
+    PG-->>Service: Task Created
+    Service->>Service: Update Cache
+    Service->>Bridge: Write JSON
+
+    Service-->>Ctrl: Task Object
+    Ctrl-->>Router: Success Response
+    Router-->>MCP: Result
+    MCP-->>UI: Response
+    UI-->>User: Task Created
+
+    %% Board Sync Flow
+    Note over Bridge: Vibe-Kanban watches file
+    Bridge->>UI: File Change Event
+    UI->>UI: Update UI
+
+    %% Statistics Flow
+    User->>UI: Get Board Stats
+    UI->>MCP: get_board_stats()
+    MCP->>Router: Route to get_board_stats
+    Router->>Ctrl: getStats()
+    Ctrl->>Service: getStats()
+
+    Note over Service: Check Cache First
+    alt Cache Hit
+        Service-->>Ctrl: Cached Stats
+    else Cache Miss
+        Service->>PG: SELECT COUNT(*) GROUP BY lane
+        PG-->>Service: Stats Data
+        Service->>Service: Update Cache
+        Service-->>Ctrl: Fresh Stats
+    end
+
+    Ctrl-->>MCP: Stats Response
+    MCP-->>UI: Stats Data
+    UI-->>User: Display Stats
+```
+
+## Component Interaction Flow
+
+### Request Flow
+1. **User/AI** initiates action through Open WebUI
+2. **MCP Server** receives the request via STDIO
+3. **Auth Middleware** validates and authenticates
+4. **Rate Limiter** checks against rate limits
+5. **Tool Router** routes to appropriate controller
+6. **Task Controller** handles business logic
+7. **Board Service** manages state operations
+
+### Data Flow
+1. **PostgreSQL** stores persistent data
+2. **Bridge File** provides real-time sync
+3. **Cache** improves read performance
+
+### Response Flow
+1. Data flows back through the chain
+2. **MCP Server** formats response
+3. **Open WebUI** displays results to user
+
+### Key Features
+- **Async Operations**: Non-blocking database calls
+- **Caching**: In-memory cache for frequently accessed data
+- **Real-time Sync**: File-based bridge for Vibe-Kanban
+- **Rate Limiting**: Protects against abuse
+- **Error Handling**: Graceful fallbacks at each layer

@@ -1,0 +1,115 @@
+# ============================================================================
+# VIBE STACK - Prometheus Configuration
+# ============================================================================
+# Prometheus configuration for Vibe Stack monitoring
+# ============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'vibe-stack'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - 'alerts.yml'
+
+# Scrape configurations
+scrape_configs:
+  # ----------------------------------------------------------------------------
+  # Prometheus self-monitoring
+  # ----------------------------------------------------------------------------
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # ----------------------------------------------------------------------------
+  # MCP Server Metrics
+  # ----------------------------------------------------------------------------
+  - job_name: 'mcp-server'
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['vibe-mcp-server:4001']
+        labels:
+          service: 'mcp-server'
+          component: 'api'
+
+  # ----------------------------------------------------------------------------
+  # Vibe-Kanban Metrics
+  # ----------------------------------------------------------------------------
+  - job_name: 'vibe-kanban'
+    scrape_interval: 15s
+    metrics_path: '/api/metrics'
+    static_configs:
+      - targets: ['vibe-kanban:4000']
+        labels:
+          service: 'vibe-kanban'
+          component: 'app'
+
+  # ----------------------------------------------------------------------------
+  # Node Exporter - System Metrics
+  # ----------------------------------------------------------------------------
+  - job_name: 'node-exporter'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+          component: 'infrastructure'
+
+  # ----------------------------------------------------------------------------
+  # cAdvisor - Container Metrics
+  # ----------------------------------------------------------------------------
+  - job_name: 'cadvisor'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
+          component: 'infrastructure'
+
+  # ----------------------------------------------------------------------------
+  # PostgreSQL Exporter (if using postgres_exporter)
+  # ----------------------------------------------------------------------------
+  - job_name: 'postgres'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres'
+          component: 'database'
+
+  # ----------------------------------------------------------------------------
+  # code-server (if metrics enabled)
+  # ----------------------------------------------------------------------------
+  - job_name: 'code-server'
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['code-server:8080']
+        labels:
+          service: 'code-server'
+          component: 'ide'
+
+  # ----------------------------------------------------------------------------
+  # Open WebUI (if metrics enabled)
+  # ----------------------------------------------------------------------------
+  - job_name: 'open-webui'
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['open-webui:8080']
+        labels:
+          service: 'open-webui'
+          component: 'ui'

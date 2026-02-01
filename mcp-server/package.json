@@ -1,0 +1,86 @@
+{
+  "name": "@vibe-stack/mcp-server",
+  "version": "1.0.0",
+  "description": "Vibe Stack MCP Server - AI-powered task management with real-time WebSocket sync",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./core/models.js": "./src/core/models.js",
+    "./services/boardService.js": "./src/services/boardService.js",
+    "./modules/kanban/services/taskPlanningService.js": "./src/modules/kanban/services/taskPlanningService.js",
+    "./modules/kanban/controllers/taskController.js": "./src/modules/kanban/controllers/taskController.js",
+    "./modules/kanban/controllers/boardController.js": "./src/modules/kanban/controllers/boardController.js",
+    "./modules/kanban/controllers/planningController.js": "./src/modules/kanban/controllers/planningController.js",
+    "./http/routes.js": "./src/http/routes.js",
+    "./middleware/validation.js": "./src/middleware/validation.js",
+    "./middleware/errorHandler.js": "./src/middleware/errorHandler.js",
+    "./config/constants.js": "./src/config/constants.js",
+    "./shared/storage/postgresStorage": "./src/shared/storage/postgresStorage.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "debug": "node --inspect index.js",
+    "test": "npm run test:unit && npm run test:integration && npm run test:security",
+    "test:unit": "node --test tests/models.test.js tests/validation.test.js",
+    "test:integration": "node --test tests/controllers.test.js tests/services.test.js tests/integration-complete-workflows.test.js",
+    "test:security": "node --test tests/security.test.js",
+    "test:websocket": "node --test tests/websocket.test.js",
+    "test:mcp-client": "node --test tests/mcp-client.test.js",
+    "test:all": "node --test tests/**/*.test.js --test-timeout=300000",
+    "test:coverage": "node --test --experimental-test-coverage --test-reporter=spec --test-reporter=html --coverage-reporter=html --coverage-reporter=json --coverage-include='src/**/*.js' tests/models.test.js tests/validation.test.js tests/controllers.test.js tests/services.test.js tests/security.test.js tests/integration-complete-workflows.test.js",
+    "test:coverage:json": "node --test --experimental-test-coverage --coverage-reporter=json --coverage-reporter=text --coverage-include='src/**/*.js' tests/models.test.js tests/validation.test.js tests/controllers.test.js tests/services.test.js",
+    "test:coverage:lcov": "node --test --experimental-test-coverage --coverage-reporter=lcov --coverage-include='src/**/*.js' tests/models.test.js tests/validation.test.js tests/controllers.test.js tests/services.test.js",
+    "test:coverage:watch": "node --test --experimental-test-coverage --coverage-reporter=text --test-reporter=spec --watch --coverage-include='src/**/*.js' tests/models.test.js tests/validation.test.js",
+    "test:coverage:serve": "npx http-server tests/coverage -p 8080 -o",
+    "test:verbose": "node --test --verbose tests/models.test.js tests/validation.test.js tests/controllers.test.js tests/services.test.js",
+    "test:watch": "node --test --watch tests/models.test.js tests/validation.test.js tests/controllers.test.js tests/services.test.js",
+    "test:models": "node --test tests/models.test.js",
+    "test:validation": "node --test tests/validation.test.js",
+    "test:services": "node --test tests/services.test.js",
+    "test:controllers": "node --test tests/controllers.test.js",
+    "test:error-handling": "node --test tests/error-handling.test.js",
+    "test:e2e": "node --test tests/e2e/**/*.test.js",
+    "test:e2e:docker": "node --test tests/e2e/docker-deployment.test.js",
+    "test:e2e:fullstack": "node --test tests/e2e/full-stack.test.js",
+    "test:e2e:performance": "node --test tests/e2e/performance.test.js",
+    "lint": "eslint . --ext .js --ignore-pattern .test-data/",
+    "lint:fix": "eslint . --ext .js --fix --ignore-pattern .test-data/",
+    "coverage": "node scripts/coverage/generate.js",
+    "coverage:open": "start tests/coverage/dashboard.html",
+    "update": "npm update && npm audit fix",
+    "prepack": "npm run update && npm test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "express": "^4.22.1",
+    "express-rate-limit": "^7.5.1",
+    "pg": "^8.18.0",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "vibe-stack",
+    "kanban",
+    "task-management",
+    "ai-planning",
+    "websocket",
+    "real-time",
+    "postgresql"
+  ],
+  "author": "Vibe Stack Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Resinder/vibe-stack.git",
+    "directory": "mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/Resinder/vibe-stack/issues"
+  },
+  "homepage": "https://github.com/Resinder/vibe-stack#readme"
+}

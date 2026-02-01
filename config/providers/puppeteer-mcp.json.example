@@ -1,0 +1,40 @@
+{
+  "_comment": "Puppeteer MCP Server Configuration - Official",
+  "_version": "1.0.0",
+  "name": "puppeteer",
+  "enabled": false,
+  "prefix": "browser",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
+  "env": {},
+  "description": "Official Puppeteer MCP server for browser automation and web scraping",
+  "tools": [
+    "navigate",
+    "screenshot",
+    "pdf_export",
+    "click",
+    "fill_form",
+    "extract_text",
+    "evaluate_script",
+    "wait_for_selector"
+  ],
+  "features": {
+    "authentication": "No API key required",
+    "browser": "Headless Chrome/Chromium",
+    "capabilities": "Full browser automation, screenshot, PDF generation",
+    "javascript": "Execute JavaScript in browser context"
+  },
+  "configuration": {
+    "headless": true,
+    "viewport": "1920x1080",
+    "timeout": 30000
+  },
+  "use_cases": {
+    "testing": "Automated UI testing and E2E tests",
+    "scraping": "Extract data from websites",
+    "screenshots": "Capture website screenshots",
+    "pdf_generation": "Generate PDF from web pages",
+    "form_automation": "Fill and submit forms automatically",
+    "monitoring": "Monitor websites for changes"
+  }
+}

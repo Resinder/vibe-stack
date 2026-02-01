@@ -1,0 +1,35 @@
+{
+  "_comment": "GitHub MCP Server Configuration - Official",
+  "_version": "1.0.0",
+  "name": "github-official",
+  "enabled": false,
+  "prefix": "github",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-github"],
+  "env": {
+    "GITHUB_TOKEN": "${GITHUB_MCP_TOKEN}"
+  },
+  "description": "Official GitHub MCP server for repository and issue management",
+  "tools": [
+    "create_issue",
+    "create_pull_request",
+    "push_or_create_pull_request",
+    "create_repository",
+    "fork_repository",
+    "push_files"
+  ],
+  "features": {
+    "authentication": "GitHub Personal Access Token required",
+    "rate_limiting": "GitHub API rate limits apply",
+    "webhooks": "Supported for real-time updates"
+  },
+  "configuration": {
+    "token_source": "GITHUB_MCP_TOKEN environment variable",
+    "token_permissions": [
+      "repo",
+      "issues",
+      "pull_requests"
+    ],
+    "recommended_scopes": "Full repository access for complete functionality"
+  }
+}

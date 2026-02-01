@@ -1,0 +1,195 @@
+name: Auto Version & Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version increment type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  auto-version:
+    name: Automatic Version Bump
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Determine version type
+        id: version_type
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "type=${{ github.event.inputs.version_type }}" >> $GITHUB_OUTPUT
+          else
+            # Auto-determine based on commit messages
+            if git log --pretty=format:%s ${{ github.event.before }}..${{ github.event.after }} | grep -qiE "feat!|breaking|major"; then
+              echo "type=major" >> $GITHUB_OUTPUT
+            elif git log --pretty=format:%s ${{ github.event.before }}..${{ github.event.after }} | grep -qiE "feat|minor"; then
+              echo "type=minor" >> $GITHUB_OUTPUT
+            else
+              echo "type=patch" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Increment version
+        id: bump
+        run: |
+          npm run version:${{ steps.version_type.outputs.type }}
+          NEW_VERSION=$(node scripts/utils/version.js get)
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "🔢 Bumped version to $NEW_VERSION"
+
+      - name: Sync versions to package.json
+        run: |
+          npm run version:sync
+          echo "✓ Synced version to all package.json files"
+
+      - name: Build documentation
+        run: |
+          npm run docs:build
+          echo "✓ Built documentation with new version"
+
+      - name: Update CHANGELOG
+        run: |
+          VERSION="${{ steps.bump.outputs.version }}"
+          DATE=$(date +%Y-%m-%d)
+
+          # Create changelog entry
+          cat > CHANGELOG_ENTRY.md << 'EOF'
+          ## [${VERSION}] - ${DATE}
+
+          ### Automated Changes
+          - Auto-incremented version based on commits
+
+          ### Commits in this release
+          EOF
+
+          # Add commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            git log --pretty=format:"- %s (%h)" ${LAST_TAG}..HEAD >> CHANGELOG_ENTRY.md
+          else
+            git log --pretty=format:"- %s (%h)" -10 >> CHANGELOG_ENTRY.md
+          fi
+
+          echo "" >> CHANGELOG_ENTRY.md
+
+          # Update CHANGELOG.md
+          if [ -f CHANGELOG.md ]; then
+            tail -n +2 CHANGELOG.md > TEMP.md
+            cat CHANGELOG_ENTRY.md > CHANGELOG.md
+            cat TEMP.md >> CHANGELOG.md
+            rm TEMP.md CHANGELOG_ENTRY.md
+          else
+            cat CHANGELOG_ENTRY.md > CHANGELOG.md
+          fi
+
+          echo "✓ Updated CHANGELOG.md"
+
+      - name: Commit and push changes
+        run: |
+          VERSION="${{ steps.bump.outputs.version }}"
+
+          git add version.json package.json mcp-server/package.json
+          git add README.md docs/ README.md docs/README.md
+          git add docs/03-technical/ CHANGELOG.md
+
+          git commit -m "chore(release): bump version to ${VERSION}
+
+          - Updated version.json to ${VERSION}
+          - Synced to all package.json files
+          - Rebuilt documentation
+          - Updated CHANGELOG.md
+
+          [skip ci]"
+
+          git push
+          echo "✓ Pushed version bump commit"
+
+      - name: Create and push tag
+        run: |
+          VERSION="${{ steps.bump.outputs.version }}"
+          git tag -a "v${VERSION}" -m "Release v${VERSION}"
+          git push origin "v${VERSION}"
+          echo "✓ Created and pushed tag v${VERSION}"
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.bump.outputs.version }}
+          release_name: 🚀 Release v${{ steps.bump.outputs.version }}
+          body: |
+            ## Release v${{ steps.bump.outputs.version }}
+
+            **Date:** ${{ steps.env.DATE }}
+
+            ### 📦 Installation
+
+            ```bash
+            git clone https://github.com/Resinder/vibe-stack.git
+            cd vibe-stack
+            npm install
+            ```
+
+            ### 📝 Changes
+
+            See [CHANGELOG.md](https://github.com/Resinder/vibe-stack/blob/main/CHANGELOG.md) for full details.
+
+            ### ⚡ Quick Start
+
+            ```bash
+            make setup
+            make up
+            ```
+
+            ### 🙏 Credits
+
+            Forked from [halilbarim/vibe-stack](https://github.com/halilbarim/vibe-stack)
+
+            ---
+
+            <details>
+            <summary>📊 Statistics</summary>
+
+            - **Version:** v${{ steps.bump.outputs.version }}
+            - **Tests:** 319/319 (309 passing, 10 skipped)
+            - **Node:** >=20.0.0
+            - **License:** MIT
+            </details>
+          draft: false
+          prerelease: false
+
+      - name: Summary
+        run: |
+          echo "### 🎉 Release Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** v${{ steps.bump.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Type:** ${{ steps.version_type.outputs.type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** [v${{ steps.bump.outputs.version }}](https://github.com/Resinder/vibe-stack/releases/tag/v${{ steps.bump.outputs.version }})" >> $GITHUB_STEP_SUMMARY

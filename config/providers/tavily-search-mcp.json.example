@@ -1,0 +1,55 @@
+{
+  "_comment": "Tavily Search MCP Server Configuration - Official",
+  "_version": "1.0.0",
+  "name": "tavily-search",
+  "enabled": false,
+  "prefix": "tavily",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-tavily-search"],
+  "env": {
+    "TAVILY_API_KEY": "${TAVILY_API_KEY}"
+  },
+  "description": "Official Tavily Search MCP server for AI-optimized web search",
+  "tools": [
+    "search",
+    "deep_research",
+    "search_with_sources",
+    "get_search_context"
+  ],
+  "features": {
+    "authentication": "API key required (paid service)",
+    "pricing": "$5/month for 1,000 searches",
+    "ai_optimized": "Specifically designed for AI/LLM applications",
+    "search_type": "Deep search with context and sources",
+    "answer_format": "LLM-optimized responses with citations"
+  },
+  "configuration": {
+    "api_key_source": "TAVILY_API_KEY environment variable",
+    "api_key_required": true,
+    "free_trial": "Available for testing",
+    "get_api_key": "https://tavily.com",
+    "pricing_url": "https://tavily.com/pricing"
+  },
+  "setup": {
+    "step_1": "Sign up at https://tavily.com",
+    "step_2": "Get API key from dashboard",
+    "step_3": "Set TAVILY_API_KEY environment variable",
+    "step_4": "Copy this config to active config: cp config/providers/tavily-search-mcp.json.example config/providers/tavily-search-mcp.json",
+    "step_5": "Set enabled: true in config file",
+    "step_6": "Restart MCP server: docker compose restart mcp-server"
+  },
+  "usage_examples": {
+    "ai_research": "AI-optimized search for research and learning",
+    "deep_dive": "Comprehensive research with multiple sources",
+    "fact_checking": "Verify information with reliable sources",
+    "technical_docs": "Find and analyze technical documentation",
+    "market_research": "Gather market insights and trends"
+  },
+  "advantages_over_brave": {
+    "1": "AI-optimized responses formatted for LLMs",
+    "2": "Better source aggregation and citation",
+    "3": "Higher quality results for research",
+    "4": "Context-aware search results",
+    "5": "Better for complex queries"
+  }
+}

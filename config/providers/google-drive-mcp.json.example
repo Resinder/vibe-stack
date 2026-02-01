@@ -1,0 +1,41 @@
+{
+  "_comment": "Google Drive MCP Server Configuration - Official",
+  "_version": "1.0.0",
+  "name": "google-drive",
+  "enabled": false,
+  "prefix": "gdrive",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-google-drive"],
+  "env": {
+    "GOOGLE_CREDENTIALS": "${GOOGLE_DRIVE_CREDENTIALS}"
+  },
+  "description": "Official Google Drive MCP server for document and file management",
+  "tools": [
+    "search_files",
+    "read_file",
+    "create_file",
+    "update_file",
+    "list_files",
+    "create_folder"
+  ],
+  "features": {
+    "authentication": "Google OAuth2 credentials required",
+    "supported_formats": "Docs, Sheets, Slides, PDF, images, code files",
+    "collaboration": "Real-time collaboration support",
+    "storage": "15GB free, paid plans available"
+  },
+  "configuration": {
+    "credentials_source": "GOOGLE_DRIVE_CREDENTIALS environment variable (JSON)",
+    "setup_guide": "https://developers.google.com/drive/api/quickstart/js",
+    "scopes_required": [
+      "https://www.googleapis.com/auth/drive",
+      "https://www.googleapis.com/auth/drive.file"
+    ]
+  },
+  "use_cases": {
+    "documentation": "Store and manage project documentation",
+    "sharing": "Share deliverables with stakeholders",
+    "backup": "Backup important files and configs",
+    "collaboration": "Collaborate on documents with team"
+  }
+}

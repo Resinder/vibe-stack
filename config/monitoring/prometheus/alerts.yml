@@ -1,0 +1,208 @@
+# ============================================================================
+# VIBE STACK - Prometheus Alert Rules
+# ============================================================================
+# Alert rules for Vibe Stack monitoring
+# ============================================================================
+
+groups:
+  # ----------------------------------------------------------------------------
+  # MCP Server Alerts
+  # ----------------------------------------------------------------------------
+  - name: mcp-server-alerts
+    interval: 30s
+    rules:
+      - alert: MCPServerDown
+        expr: up{job="mcp-server"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: mcp-server
+        annotations:
+          summary: "MCP Server is down"
+          description: "MCP Server has been down for more than 1 minute."
+
+      - alert: MCPHighErrorRate
+        expr: rate(mcp_tool_errors_total[5m]) / rate(mcp_tool_calls_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp-server
+        annotations:
+          summary: "High MCP error rate"
+          description: "MCP error rate is above 10% for the last 5 minutes."
+
+      - alert: MCPSlowResponses
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="mcp-server"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp-server
+        annotations:
+          summary: "MCP slow responses"
+          description: "95th percentile of response time is above 1 second."
+
+  # ----------------------------------------------------------------------------
+  # Vibe-Kanban Alerts
+  # ----------------------------------------------------------------------------
+  - name: vibe-kanban-alerts
+    interval: 30s
+    rules:
+      - alert: VibeKanbanDown
+        expr: up{job="vibe-kanban"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: vibe-kanban
+        annotations:
+          summary: "Vibe-Kanban is down"
+          description: "Vibe-Kanban has been down for more than 1 minute."
+
+      - alert: HighTaskCount
+        expr: tasks_total > 500
+        for: 10m
+        labels:
+          severity: info
+          service: vibe-kanban
+        annotations:
+          summary: "High task count"
+          description: "Board has more than 500 tasks."
+
+      - alert: CriticalTasksBacklog
+        expr: tasks_by_priority{priority="critical"} > 10
+        for: 1h
+        labels:
+          severity: warning
+          service: vibe-kanban
+        annotations:
+          summary: "Many critical tasks in backlog"
+          description: "More than 10 critical tasks in the backlog."
+
+  # ----------------------------------------------------------------------------
+  # Database Alerts
+  # ----------------------------------------------------------------------------
+  - name: database-alerts
+    interval: 30s
+    rules:
+      - alert: PostgreSQLDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: postgres
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL has been down for more than 1 minute."
+
+      - alert: PostgreSQLSlowQueries
+        expr: rate(pg_stat_statements_mean_time_ms[5m]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: postgres
+        annotations:
+          summary: "PostgreSQL slow queries"
+          description: "Average query time is above 1 second."
+
+      - alert: PostgreSQLHighConnections
+        expr: pg_stat_database_numbackends{datname="vibestack"} > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: postgres
+        annotations:
+          summary: "High PostgreSQL connections"
+          description: "PostgreSQL has more than 80 active connections."
+
+  # ----------------------------------------------------------------------------
+  # Infrastructure Alerts
+  # ----------------------------------------------------------------------------
+  - name: infrastructure-alerts
+    interval: 30s
+    rules:
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is above 90%."
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 80%."
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+          service: infrastructure
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is below 10%."
+
+  # ----------------------------------------------------------------------------
+  # Container Alerts
+  # ----------------------------------------------------------------------------
+  - name: container-alerts
+    interval: 30s
+    rules:
+      - alert: ContainerRestarting
+        expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: containers
+        annotations:
+          summary: "Container restarting"
+          description: "Container {{ $labels.container }} is restarting."
+
+      - alert: ContainerNotReady
+        expr: kube_pod_status_ready{condition="false"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          service: containers
+        annotations:
+          summary: "Container not ready"
+          description: "Container {{ $labels.container }} is not ready."
+
+  # ----------------------------------------------------------------------------
+  # API Rate Limiting Alerts
+  # ----------------------------------------------------------------------------
+  - name: api-rate-limit-alerts
+    interval: 30s
+    rules:
+      - alert: HighRateLimitHits
+        expr: rate(http_requests_total{status="429"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: info
+          service: api
+        annotations:
+          summary: "High rate limit hits"
+          description: "Rate limit is being hit frequently."
+
+  # ----------------------------------------------------------------------------
+  # Business Logic Alerts
+  # ----------------------------------------------------------------------------
+  - name: business-alerts
+    interval: 1m
+    rules:
+      - alert: NoActivity
+        expr: rate(mcp_tool_calls_total[30m]) == 0
+        for: 2h
+        labels:
+          severity: info
+          service: business
+        annotations:
+          summary: "No system activity"
+          description: "No MCP tool calls in the last 2 hours."

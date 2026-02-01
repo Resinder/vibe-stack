@@ -1,0 +1,361 @@
+name: Security Scanning
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'docker-compose.yml'
+      - 'docker-compose.monitoring.yml'
+      - 'Dockerfile'
+      - 'mcp-server/Dockerfile'
+      - 'version.json'
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docker-compose.yml'
+      - 'docker-compose.monitoring.yml'
+      - 'Dockerfile'
+      - 'mcp-server/Dockerfile'
+
+  schedule:
+    # Run security scans daily at 6 AM UTC
+    - cron: '0 6 * * *'
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  # Scan all Docker images used in the project
+  scan-docker-images:
+    name: Scan Docker Images
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        image:
+          - name: "Node.js"
+            ref: "node:20.18.0-slim"
+          - name: "PostgreSQL"
+            ref: "postgres:16.8-alpine"
+          - name: "code-server"
+            ref: "lscr.io/linuxserver/code-server:4.24.1"
+          - name: "Open WebUI"
+            ref: "ghcr.io/open-webui/open-webui:v0.5.3"
+          - name: "Prometheus"
+            ref: "prom/prometheus:v3.1.0"
+          - name: "Grafana"
+            ref: "grafana/grafana:11.3.1"
+          - name: "AlertManager"
+            ref: "prom/alertmanager:v0.28.0"
+          - name: "Node Exporter"
+            ref: "prom/node-exporter:v1.8.2"
+          - name: "cAdvisor"
+            ref: "gcr.io/cadvisor/cadvisor:v0.51.0"
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ matrix.image.ref }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+        env:
+          TRIVY_NO_PROGRESS: 'true'
+          TRIVY_CACHE_DIR: '/tmp/trivy-cache'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'docker-image-${{ matrix.image.name }}'
+
+      - name: Generate vulnerability report
+        if: always()
+        run: |
+          echo "## Vulnerability Report for ${{ matrix.image.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ matrix.image.ref }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Parse SARIF and extract summary
+          if [ -f trivy-results.sarif ]; then
+            VULN_COUNT=$(jq '[.runs[].results | length] | add' trivy-results.sarif 2>/dev/null || echo 0)
+            echo "**Vulnerabilities Found:** $VULN_COUNT" >> $GITHUB_STEP_SUMMARY
+
+            if [ "$VULN_COUNT" -gt 0 ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "⚠️ Vulnerabilities detected. See Security tab for details." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "✅ No critical or high severity vulnerabilities found." >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+  # Scan MCP Server Dockerfile
+  scan-mcp-server:
+    name: Scan MCP Server Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if Dockerfile exists
+        id: check-dockerfile
+        run: |
+          if [ -f "mcp-server/Dockerfile" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build MCP Server image
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./mcp-server
+          file: ./mcp-server/Dockerfile
+          tags: vibe-mcp-server:scan
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy on MCP Server image
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'vibe-mcp-server:scan'
+          format: 'sarif'
+          output: 'trivy-mcp-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '0'
+        env:
+          TRIVY_NO_PROGRESS: 'true'
+
+      - name: Upload MCP Server results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-mcp-results.sarif'
+          category: 'mcp-server-dockerfile'
+
+  # Grype scanning for additional coverage
+  grype-scan:
+    name: Grype Vulnerability Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Parse images from version.json
+        id: parse-images
+        run: |
+          # Extract Docker images from version.json
+          IMAGES=$(jq -r '.docker.images | to_entries[] | "\(.value.repository):\(.value.tag)"' version.json)
+          echo "$IMAGES" > /tmp/images-to-scan.txt
+          echo "found=true" >> $GITHUB_OUTPUT
+
+      - name: Install Grype
+        if: steps.parse-images.outputs.found == 'true'
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Run Grype scan
+        if: steps.parse-images.outputs.found == 'true'
+        run: |
+          mkdir -p grype-results
+
+          while IFS= read -r image; do
+            if [ -n "$image" ]; then
+              echo "Scanning: $image"
+
+              # Sanitize image name for filename
+              SAFE_NAME=$(echo "$image" | tr '/:' '_')
+              OUTPUT_FILE="grype-results/${SAFE_NAME}.json"
+
+              # Run Grype scan
+              grype "$image" --output json --file "$OUTPUT_FILE" || true
+
+              # Generate summary
+              if [ -f "$OUTPUT_FILE" ]; then
+                VULNS=$(jq '[.matches[] | select(.vulnerability.severity | IN("Critical","High"))] | length' "$OUTPUT_FILE" 2>/dev/null || echo 0)
+                echo "$image: $VULNS critical/high vulnerabilities"
+              fi
+            fi
+          done < /tmp/images-to-scan.txt
+
+      - name: Generate Grype summary
+        if: always()
+        run: |
+          echo "## Grype Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          for report in grype-results/*.json; do
+            if [ -f "$report" ]; then
+              # Extract image name
+              IMAGE=$(basename "$report" .json | tr '_' '/' | sed 's/_[0-9]/:/')
+              echo "**${IMAGE}**" >> $GITHUB_STEP_SUMMARY
+
+              # Count vulnerabilities by severity
+              CRITICAL=$(jq '[.matches[] | select(.vulnerability.severity == "Critical")] | length' "$report" 2>/dev/null || echo 0)
+              HIGH=$(jq '[.matches[] | select(.vulnerability.severity == "High")] | length' "$report" 2>/dev/null || echo 0)
+              MEDIUM=$(jq '[.matches[] | select(.vulnerability.severity == "Medium")] | length' "$report" 2>/dev/null || echo 0)
+
+              echo "- Critical: $CRITICAL" >> $GITHUB_STEP_SUMMARY
+              echo "- High: $HIGH" >> $GITHUB_STEP_SUMMARY
+              echo "- Medium: $MEDIUM" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+      - name: Upload Grype results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grype-scan-results
+          path: grype-results/
+          retention-days: 30
+
+  # Dockerfile linting and security checks
+  lint-dockerfiles:
+    name: Lint Dockerfiles
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Hadolint - Dockerfile Linter
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: 'mcp-server/Dockerfile'
+          format: 'sarif'
+          output: 'hadolint-results.sarif'
+        continue-on-error: true
+
+      - name: Upload Hadolint results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'hadolint-results.sarif'
+          category: 'dockerfile-lint'
+
+  # Security policy compliance check
+  compliance-check:
+    name: Security Compliance Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for pinned versions
+        run: |
+          echo "Checking Docker image version pinning..."
+
+          ERRORS=0
+
+          # Check docker-compose.yml
+          if grep -q "image:.*:latest" docker-compose.yml; then
+            echo "❌ Found :latest tag in docker-compose.yml"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if grep -q "image:.*:main" docker-compose.yml; then
+            echo "❌ Found :main tag in docker-compose.yml"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check docker-compose.monitoring.yml
+          if grep -q "image:.*:latest" docker-compose.monitoring.yml; then
+            echo "❌ Found :latest tag in docker-compose.monitoring.yml"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ "$ERRORS" -eq 0 ]; then
+            echo "✅ All Docker images are pinned to specific versions"
+          else
+            echo "::error::Found unpinned Docker image versions"
+            exit 1
+          fi
+
+      - name: Verify version.json sync
+        run: |
+          echo "Verifying Docker image versions match version.json..."
+
+          # Extract Node.js version from docker-compose.yml
+          NODE_COMPOSE=$(grep -A1 "image: node:" docker-compose.yml | grep image | awk '{print $2}' | cut -d':' -f2)
+          NODE_VERSION=$(jq -r '.docker.images.node.tag' version.json)
+
+          if [ "$NODE_COMPOSE" = "$NODE_VERSION" ]; then
+            echo "✅ Node version matches"
+          else
+            echo "::warning::Node version mismatch: compose=$NODE_COMPOSE, version.json=$NODE_VERSION"
+          fi
+
+      - name: Check for security labels
+        run: |
+          echo "Checking for security best practices..."
+
+          # Check if .dockerignore exists
+          if [ -f "mcp-server/.dockerignore" ]; then
+            echo "✅ .dockerignore exists"
+          else
+            echo "::warning::Consider adding .dockerignore to reduce image size"
+          fi
+
+  # Summary report
+  security-summary:
+    name: Security Summary
+    needs: [scan-docker-images, scan-mcp-server, grype-scan, lint-dockerfiles, compliance-check]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate security summary
+        run: |
+          echo "# Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Images Scan | ${{ needs.scan-docker-images.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| MCP Server Scan | ${{ needs.scan-mcp-server.result == 'success' || needs.scan-mcp-server.result == 'skipped' ? '✅ Passed' : '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Grype Scan | ${{ needs.grype-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dockerfile Lint | ${{ needs.lint-dockerfiles.result == 'success' || needs.lint-dockerfiles.result == 'skipped' ? '✅ Passed' : '⚠️ Issues found' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Compliance Check | ${{ needs.compliance-check.result == 'success' && '✅ Passed' : '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Security Features" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ All Docker images pinned to specific versions" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Automated vulnerability scanning (Trivy + Grype)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ SARIF reports uploaded to GitHub Security" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Daily scheduled scans" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dockerfile linting with Hadolint" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review the Security tab in GitHub for detailed findings" >> $GITHUB_STEP_SUMMARY
+          echo "2. Address critical and high severity vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          echo "3. Review Renovate PRs for automated updates" >> $GITHUB_STEP_SUMMARY

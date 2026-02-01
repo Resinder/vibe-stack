@@ -1,0 +1,98 @@
+{
+  "_comment": "Authentication & Authorization pattern for task generation",
+  "name": "authentication",
+  "displayName": "Authentication & Authorization",
+  "description": "Complete authentication system with user management, session handling, and security features",
+  "keywords": [
+    "auth",
+    "authentication",
+    "authorization",
+    "login",
+    "logout",
+    "oauth",
+    "jwt",
+    "session",
+    "password",
+    "2fa",
+    "mfa",
+    "sso",
+    "identity",
+    "user",
+    "signup",
+    "register",
+    "signin",
+    "token",
+    "refresh",
+    "csrf",
+    "rbac",
+    "permissions",
+    "roles"
+  ],
+  "estimatedHours": 54,
+  "taskCount": 8,
+  "priorityDistribution": {
+    "high": 6,
+    "medium": 2,
+    "low": 0
+  },
+  "tasks": [
+    {
+      "title": "Design authentication architecture",
+      "description": "Design secure authentication architecture including session management, token handling, and security best practices",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["design", "architecture", "security"]
+    },
+    {
+      "title": "Set up authentication backend",
+      "description": "Implement authentication backend with user registration, login, password hashing, and session management",
+      "priority": "high",
+      "estimatedHours": 12,
+      "tags": ["backend", "security", "api"]
+    },
+    {
+      "title": "Implement password reset flow",
+      "description": "Create secure password reset functionality with email verification and token-based reset",
+      "priority": "high",
+      "estimatedHours": 6,
+      "tags": ["security", "email", "ux"]
+    },
+    {
+      "title": "Add OAuth/SSO integration",
+      "description": "Integrate OAuth providers (Google, GitHub, etc.) or Single Sign-On (SSO) for enterprise authentication",
+      "priority": "medium",
+      "estimatedHours": 10,
+      "tags": ["integration", "oauth", "sso"]
+    },
+    {
+      "title": "Implement 2FA/MFA support",
+      "description": "Add two-factor or multi-factor authentication using TOTP or SMS",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["security", "2fa", "mfa"]
+    },
+    {
+      "title": "Set up authorization & RBAC",
+      "description": "Implement role-based access control with permissions, roles, and access policies",
+      "priority": "high",
+      "estimatedHours": 10,
+      "tags": ["authorization", "rbac", "security"]
+    },
+    {
+      "title": "Create authentication UI",
+      "description": "Build user interface for login, registration, password reset, and profile management",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["frontend", "ui", "ux"]
+    },
+    {
+      "title": "Add session management",
+      "description": "Implement session management with timeout, refresh tokens, and concurrent session handling",
+      "priority": "medium",
+      "estimatedHours": 6,
+      "tags": ["session", "security", "backend"]
+    }
+  ],
+  "dependencies": [],
+  "relatedPatterns": ["database", "api", "security"]
+}

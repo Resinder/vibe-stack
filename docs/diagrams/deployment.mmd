@@ -1,0 +1,184 @@
+# ============================================================================
+# VIBE STACK - Deployment Architecture
+# ============================================================================
+# Docker Compose deployment diagram
+# ============================================================================
+
+```mermaid
+graph TB
+    subgraph "Docker Host"
+        subgraph "Frontend Services"
+            WEBUI[Open WebUI<br/>Port 8081<br/>Image: ghcr.io/open-webui/open-webui]
+            CODE[code-server<br/>Port 8443<br/>Image: codercom/code-server]
+        end
+
+        subgraph "Backend Services"
+            KANBAN[Vibe-Kanban<br/>Port 4000<br/>Image: node:20-slim]
+            MCP[MCP Server<br/>Port 4001<br/>Build: ./mcp-server]
+        end
+
+        subgraph "Data Layer"
+            POSTGRES[(PostgreSQL<br/>Port 5432<br/>Image: postgres:16-alpine)]
+        end
+
+        subgraph "Monitoring Stack"
+            PROM[Prometheus<br/>Port 9090<br/>Image: prom/prometheus]
+            GRAF[Grafana<br/>Port 3000<br/>Image: grafana/grafana]
+            AM[AlertManager<br/>Port 9093<br/>Image: prom/alertmanager]
+            NODE[Node Exporter<br/>Port 9100<br/>Image: prom/node-exporter]
+            CAD[cAdvisor<br/>Port 8080<br/>Image: gcr.io/cadvisor/cadvisor]
+        end
+
+        subgraph "Volumes"
+            V1[vibe_config]
+            V2[vibe_data]
+            V3[code_server_data]
+            V4[open_webui_data]
+            V5[postgres_data]
+            V6[prometheus_data]
+            V7[grafana_data]
+        end
+
+        subgraph "Networks"
+            N1[Default Network<br/>bridge]
+            N2[Monitoring Network<br/>vibe-monitoring]
+        end
+    end
+
+    %% Service Connections
+    WEBUI -.->|AI Chat| MCP
+    CODE -.->|HTTP API| MCP
+    MCP -->|DB Connection| POSTGRES
+    MCP -.->|Metrics| PROM
+
+    %% Volume Mounts
+    KANBAN --> V1
+    KANBAN --> V2
+    CODE --> V3
+    WEBUI --> V4
+    POSTGRES --> V5
+    PROM --> V6
+    GRAF --> V7
+
+    %% Network Connections
+    KANBAN -.-> N1
+    MCP -.-> N1
+    POSTGRES -.-> N1
+
+    PROM -.-> N2
+    GRAF -.-> N2
+    AM -.-> N2
+    NODE -.-> N2
+    CAD -.-> N2
+
+    %% External Access
+    USER[User Browser] -->|HTTPS| WEBUI
+    USER -->|HTTPS| CODE
+    USER -->|HTTP| GRAF
+    USER -->|HTTP| PROM
+```
+
+## Deployment Architecture
+
+### Service Overview
+
+#### Frontend Services
+- **Open WebUI** (Port 8081)
+  - Image: `ghcr.io/open-webui/open-webui:main`
+  - Purpose: AI chat interface
+  - Resources: 1 CPU, 1GB RAM
+  - Volume: `open_webui_data`
+
+- **code-server** (Port 8443)
+  - Image: `codercom/code-server:latest`
+  - Purpose: Browser-based VS Code
+  - Resources: 1 CPU, 1GB RAM
+  - Volume: `code_server_data`
+
+#### Backend Services
+- **Vibe-Kanban** (Port 4000)
+  - Image: `node:20-slim`
+  - Purpose: AI agent orchestration
+  - Resources: 2 CPU, 2GB RAM
+  - Volumes: `vibe_config`, `vibe_data`
+
+- **MCP Server** (Port 4001)
+  - Build: `./mcp-server`
+  - Purpose: API bridge with tools
+  - Resources: 0.5 CPU, 256MB RAM
+  - Depends: vibe-kanban, postgres
+
+#### Data Layer
+- **PostgreSQL** (Port 5432)
+  - Image: `postgres:16-alpine`
+  - Purpose: State management
+  - Resources: 1 CPU, 512MB RAM
+  - Volume: `postgres_data`
+
+#### Monitoring Stack
+- **Prometheus** (Port 9090)
+  - Metrics collection and storage
+  - Volume: `prometheus_data`
+
+- **Grafana** (Port 3000)
+  - Visualization dashboards
+  - Volume: `grafana_data`
+
+- **AlertManager** (Port 9093)
+  - Alert routing and management
+
+- **Node Exporter** (Port 9100)
+  - System metrics collection
+
+- **cAdvisor** (Port 8080)
+  - Container metrics collection
+
+### Network Configuration
+
+#### Default Network (bridge)
+- All main services communicate here
+- Internal service discovery
+- Isolated from external networks
+
+#### Monitoring Network (vibe-monitoring)
+- Monitoring stack communication
+- Metrics aggregation
+- Alert propagation
+
+### Volume Persistence
+
+| Volume | Purpose | Size |
+|--------|---------|------|
+| vibe_config | Vibe-Kanban settings | ~10MB |
+| vibe_data | Vibe-Kanban data | ~100MB |
+| code_server_data | VS Code settings/extensions | ~500MB |
+| open_webui_data | Chat history/models | ~1GB |
+| postgres_data | Database data | ~100MB+ |
+| prometheus_data | Metrics storage | ~10GB+ |
+| grafana_data | Dashboard storage | ~100MB |
+
+### Resource Limits
+
+| Service | CPU Limit | Memory Limit |
+|---------|-----------|--------------|
+| Vibe-Kanban | 2.0 | 2GB |
+| code-server | 1.0 | 1GB |
+| Open WebUI | 1.0 | 1GB |
+| MCP Server | 0.5 | 256MB |
+| PostgreSQL | 1.0 | 512MB |
+
+### Health Checks
+
+All services include health checks:
+- **Interval**: 15-30 seconds
+- **Timeout**: 10 seconds
+- **Retries**: 3 attempts
+- **Start Period**: 10-60 seconds
+
+### Startup Order
+
+1. PostgreSQL (database)
+2. Vibe-Kanban (depends on PostgreSQL)
+3. MCP Server (depends on Vibe-Kanban)
+4. Frontend services (independent)
+5. Monitoring stack (independent)

@@ -1,0 +1,43 @@
+{
+  "_comment": "Brave Search MCP Server Configuration - Official",
+  "_version": "1.0.0",
+  "name": "brave-search",
+  "enabled": false,
+  "prefix": "brave",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+  "env": {
+    "BRAVE_API_KEY": "${BRAVE_SEARCH_API_KEY}"
+  },
+  "description": "Official Brave Search MCP server for web search capabilities",
+  "tools": [
+    "search",
+    "advanced_search",
+    "search_with_filters"
+  ],
+  "features": {
+    "authentication": "API key optional (free tier available)",
+    "rate_limits": "Free: Unlimited requests, Paid: Higher rate limits",
+    "search_type": "Web search with rich snippets",
+    "independent": "Independent search engine, privacy-focused"
+  },
+  "configuration": {
+    "api_key_source": "BRAVE_SEARCH_API_KEY environment variable",
+    "api_key_required": false,
+    "free_tier": "Available without API key",
+    "get_api_key": "https://api.search.brave.com/app/keys"
+  },
+  "setup": {
+    "step_1_optional": "Get free API key from https://api.search.brave.com/app/keys",
+    "step_2": "Set BRAVE_SEARCH_API_KEY environment variable",
+    "step_3": "Copy this config to active config: cp config/providers/brave-search-mcp.json.example config/providers/brave-search-mcp.json",
+    "step_4": "Set enabled: true in config file",
+    "step_5": "Restart MCP server: docker compose restart mcp-server"
+  },
+  "usage_examples": {
+    "web_search": "Search the web for current information",
+    "research": "Research topics, documentation, tutorials",
+    "troubleshooting": "Find solutions to technical problems",
+    "news": "Get latest news and updates"
+  }
+}

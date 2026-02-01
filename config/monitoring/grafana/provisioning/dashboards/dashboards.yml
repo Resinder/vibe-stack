@@ -1,0 +1,19 @@
+# ============================================================================
+# VIBE STACK - Grafana Dashboard Provisioning
+# ============================================================================
+# Automatic dashboard configuration for Grafana
+# ============================================================================
+
+apiVersion: 1
+
+providers:
+  - name: 'Vibe Stack Dashboards'
+    orgId: 1
+    folder: 'Vibe Stack'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true

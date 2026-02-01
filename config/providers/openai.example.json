@@ -1,0 +1,56 @@
+{
+  "_comment": "OpenAI GPT Configuration",
+  "_documentation": "https://platform.openai.com/docs/api-reference",
+
+  "provider": "openai",
+  "enabled": false,
+
+  "api": {
+    "baseUrl": "https://api.openai.com/v1",
+    "apiKey": "${OPENAI_API_KEY}",
+    "version": "v1",
+    "timeout": 120000
+  },
+
+  "models": {
+    "haiku": {
+      "name": "gpt-3.5-turbo",
+      "alias": "fast",
+      "contextWindow": 16385,
+      "maxTokens": 4096
+    },
+    "sonnet": {
+      "name": "gpt-4o",
+      "alias": "balanced",
+      "contextWindow": 128000,
+      "maxTokens": 4096
+    },
+    "opus": {
+      "name": "gpt-4-turbo",
+      "alias": "quality",
+      "contextWindow": 128000,
+      "maxTokens": 4096
+    }
+  },
+
+  "defaults": {
+    "model": "sonnet",
+    "temperature": 0.7,
+    "topP": 0.9,
+    "maxTokens": 4096
+  },
+
+  "capabilities": {
+    "codeGeneration": "excellent",
+    "chineseSupport": "good",
+    "multimodal": true,
+    "streaming": true
+  },
+
+  "pricing": {
+    "currency": "USD",
+    "haiku": { "input": 0.50, "output": 1.50, "unit": "1M" },
+    "sonnet": { "input": 2.50, "output": 10.00, "unit": "1M" },
+    "opus": { "input": 10.00, "output": 30.00, "unit": "1M" }
+  }
+}

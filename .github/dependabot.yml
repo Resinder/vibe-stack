@@ -1,0 +1,90 @@
+version: 2
+updates:
+  # Enable version updates for npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "00:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Resinder"
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    # Auto-merge dependency updates (requires tests to pass)
+    automerge: false
+    # Groups dependencies together for fewer PRs
+    groups:
+      mcp-dependencies:
+        patterns:
+          - "@modelcontextprotocol/sdk*"
+        exclude-patterns:
+          - "*-rc*"
+      express-dependencies:
+        patterns:
+          - "express*"
+          - "express-rate-limit*"
+      database-dependencies:
+        patterns:
+          - "pg*"
+      websocket-dependencies:
+        patterns:
+          - "ws*"
+
+  # MCP Server specific dependencies
+  - package-ecosystem: "npm"
+    directory: "/mcp-server"
+    schedule:
+      interval: "daily"
+      time: "00:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Resinder"
+    labels:
+      - "dependencies"
+      - "npm"
+      - "mcp-server"
+    commit-message:
+      prefix: "chore(mcp-server/deps)"
+      include: "scope"
+    automerge: false
+    groups:
+      production-dependencies:
+        patterns:
+          - "@modelcontextprotocol/sdk*"
+          - "express*"
+          - "pg*"
+          - "ws*"
+        exclude-patterns:
+          - "*-rc*"
+          - "*-beta*"
+          - "*-alpha*"
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(docker)"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "ci(deps)"
+    labels:
+      - "dependencies"
+      - "github-actions"

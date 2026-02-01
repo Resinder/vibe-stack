@@ -1,0 +1,26 @@
+{
+  "lanes": {
+    "backlog": [
+      {
+        "id": "task-1769634848292-h6m2iyc8y",
+        "title": "Test",
+        "description": "",
+        "lane": "backlog",
+        "priority": "medium",
+        "status": "pending",
+        "tags": [],
+        "assignee": null,
+        "estimatedHours": null,
+        "createdAt": "2026-01-28T21:14:08.292Z",
+        "updatedAt": "2026-01-28T21:14:08.292Z",
+        "metadata": {}
+      }
+    ],
+    "todo": [],
+    "in_progress": [],
+    "done": [],
+    "recovery": []
+  },
+  "lastSync": "2026-01-28T21:14:08.292Z",
+  "version": "1.0.0"
+}

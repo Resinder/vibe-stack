@@ -1,0 +1,42 @@
+{
+  "_comment": "Exa AI Search MCP Server Configuration - Official",
+  "_version": "1.0.0",
+  "name": "exa-search",
+  "enabled": false,
+  "prefix": "exa",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-exa"],
+  "env": {
+    "EXA_API_KEY": "${EXA_API_KEY}"
+  },
+  "description": "Official Exa AI Search MCP server for AI-optimized web search",
+  "tools": [
+    "search",
+    "similar_search",
+    "contents_search",
+    "advanced_search"
+  ],
+  "features": {
+    "authentication": "Exa API key required",
+    "pricing": "Free tier: 1000 searches/month, Paid: $25/month for 10,000",
+    "ai_optimized": "Specifically designed for AI/LLM applications",
+    "embedding_search": "Semantic search capabilities",
+    "live_crawl": "Live web crawling and content extraction"
+  },
+  "configuration": {
+    "api_key_source": "EXA_API_KEY environment variable",
+    "get_api_key": "https://dashboard.exa.ai",
+    "pricing_url": "https://exa.ai/pricing"
+  },
+  "advantages": {
+    "over_tavily": "Better embedding search, semantic similarity",
+    "over_brave": "AI-optimized results, live crawling",
+    "use_cases": "Research, competitive analysis, content discovery"
+  },
+  "use_cases": {
+    "research": "Deep research with semantic search",
+    "competitive": "Find similar content and competitors",
+    "content": "Discover relevant content for any topic",
+    "live_data": "Get live data from websites with crawling"
+  }
+}

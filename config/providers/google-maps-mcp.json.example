@@ -1,0 +1,38 @@
+{
+  "_comment": "Google Maps MCP Server Configuration - Official",
+  "_version": "1.0.0",
+  "name": "google-maps",
+  "enabled": false,
+  "prefix": "maps",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-google-maps"],
+  "env": {
+    "GOOGLE_MAPS_API_KEY": "${GOOGLE_MAPS_API_KEY}"
+  },
+  "description": "Official Google Maps MCP server for location and mapping services",
+  "tools": [
+    "geocode",
+    "search_places",
+    "get_directions",
+    "get_distance",
+    "place_details",
+    "static_map"
+  ],
+  "features": {
+    "authentication": "Google Maps API key required",
+    "pricing": "Free tier: $200 credit/month",
+    "features": "Geocoding, places search, directions, distance matrix",
+    "use_cases": "Location-based services, delivery tracking, service areas"
+  },
+  "configuration": {
+    "api_key_source": "GOOGLE_MAPS_API_KEY environment variable",
+    "get_api_key": "https://developers.google.com/maps/documentation/javascript/get-api-key",
+    "billing_required": true
+  },
+  "use_cases": {
+    "logistics": "Calculate delivery times and routes",
+    "locations": "Find nearby services or customers",
+    "geocoding": "Convert addresses to coordinates",
+    "areas": "Define service areas or coverage"
+  }
+}

@@ -1,0 +1,116 @@
+#!/usr/bin/env sh
+# =============================================================================
+# Vibe Stack - Commit Message Hook
+# =============================================================================
+#
+# This script validates commit messages to ensure they follow the
+# Conventional Commits specification:
+#
+#   <type>(<scope>): <description>
+#
+# Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build
+#
+# Examples:
+#   feat(kanban): add drag-and-drop task reordering
+#   fix(auth): resolve JWT token expiration issue
+#   docs: update README with new setup instructions
+#
+# Reference: https://www.conventionalcommits.org
+#
+# To skip this hook (not recommended):
+#   git commit --no-verify -m "commit message"
+#
+# =============================================================================
+
+set -e
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+# Get commit message
+commit_msg_file=$1
+commit_msg=$(cat "$commit_msg_file")
+
+# Regex for conventional commits
+# Format: type(scope): description
+regex="^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?\!?:\s.{1,72}"
+
+echo "Validating commit message..."
+
+# Check if message is empty
+if [ -z "$commit_msg" ]; then
+    echo "${RED}[ERROR]${NC} Commit message is empty"
+    echo ""
+    echo "Expected format:"
+    echo "  <type>(<scope>): <description>"
+    echo ""
+    echo "Examples:"
+    echo "  feat(kanban): add drag-and-drop task reordering"
+    echo "  fix(auth): resolve JWT token expiration issue"
+    echo "  docs: update README with new setup instructions"
+    echo ""
+    echo "Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build"
+    exit 1
+fi
+
+# Skip validation for merge commits, squashes, and WIP commits
+if echo "$commit_msg" | grep -qE "^(Merge|Squash|Revert|WIP|wip)"; then
+    echo "${YELLOW}[INFO]${NC} Skipping validation for merge/WIP commit"
+    exit 0
+fi
+
+# Check if message matches conventional commits format
+if echo "$commit_msg" | grep -qE "$regex"; then
+    echo "${GREEN}[✓]${NC} Commit message follows Conventional Commits specification"
+    
+    # Additional checks
+    type=$(echo "$commit_msg" | sed -E 's/^([a-z]+)(\(.+\))?\!?:.*/\1/')
+    
+    # Check if subject line is too long
+    subject=$(echo "$commit_msg" | head -n 1)
+    if [ ${#subject} -gt 72 ]; then
+        echo "${YELLOW}[WARN]${NC} Subject line is longer than 72 characters (${#subject})"
+        echo "  Consider breaking into multiple lines"
+    fi
+    
+    # Check if description starts with lowercase
+    description=$(echo "$commit_msg" | sed -E 's/^[a-z]+(\(.+\))?\!?:\s//' | head -c 1)
+    if [[ "$description" == [A-Z] ]]; then
+        echo "${YELLOW}[WARN]${NC} Description should start with lowercase"
+        echo "  This is not a hard requirement, but a convention"
+    fi
+    
+    exit 0
+else
+    echo "${RED}[ERROR]${NC} Commit message does not follow Conventional Commits specification"
+    echo ""
+    echo "Your message:"
+    echo "  $commit_msg"
+    echo ""
+    echo "Expected format:"
+    echo "  <type>(<scope>): <description>"
+    echo ""
+    echo "Valid types:"
+    echo "  feat     - A new feature"
+    echo "  fix      - A bug fix"
+    echo "  docs     - Documentation only changes"
+    echo "  style    - Changes that don't affect code meaning"
+    echo "  refactor - Code changes that neither fix bug nor add feature"
+    echo "  test     - Adding or updating tests"
+    echo "  chore    - Changes to build process or auxiliary tools"
+    echo "  perf     - Code changes that improve performance"
+    echo "  ci       - CI/CD related changes"
+    echo "  build    - Build system changes"
+    echo ""
+    echo "Examples:"
+    echo "  feat(kanban): add drag-and-drop task reordering"
+    echo "  fix(auth): resolve JWT token expiration issue"
+    echo "  docs: update README with new setup instructions"
+    echo "  chore(deps): update express to latest version"
+    echo ""
+    echo "Reference: https://www.conventionalcommits.org"
+    exit 1
+fi

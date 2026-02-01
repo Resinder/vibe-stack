@@ -1,0 +1,298 @@
+name: Docker Image Auto-Update & Release
+
+on:
+  # Run daily at 00:00 UTC
+  schedule:
+    - cron: '0 0 * * *'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # Check for Docker image updates
+  check-docker-updates:
+    name: Check Docker Image Updates
+    runs-on: ubuntu-latest
+    outputs:
+      has-updates: ${{ steps.check.outputs.has-updates }}
+      images-to-update: ${{ steps.check.outputs.images-to-update }}
+      update-details: ${{ steps.check.outputs.update-details }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for Docker image updates
+        id: check
+        run: |
+          echo "Checking for Docker image updates..."
+
+          HAS_UPDATES=false
+          IMAGES_TO_UPDATE=""
+          UPDATE_DETAILS=""
+
+          # Function to get latest version from Docker Hub API
+          get_latest_dockerhub() {
+            local repo=$1
+            local current=$2
+            curl -s "https://hub.docker.com/v2/repositories/${repo}/tags/?page_size=100" | \
+              jq -r --arg current "$current" '.results[] | select(.name | test("^[0-9]+\\.[0-9]+")) | .name' | \
+              sort -V | tail -n 1
+          }
+
+          # Function to get latest from GitHub releases
+          get_latest_ghcr() {
+            local repo=$1
+            local current=$2
+            curl -s "https://api.github.com/repos/${repo}/releases" | \
+              jq -r '[.[].tag_name | select(startswith("v")) | .][0]' | \
+              sed 's/^v//'
+          }
+
+          # Check postgres
+          current_pg=$(grep -E "image: postgres:" docker-compose.yml | awk '{print $2}' | cut -d: -f2)
+          latest_pg=$(get_latest_dockerhub "library/postgres" "$current_pg")
+          if [ "$latest_pg" != "$current_pg" ]; then
+            HAS_UPDATES=true
+            IMAGES_TO_UPDATE="${IMAGES_TO_UPDATE} postgres:${current_pg}>${latest_pg}"
+            UPDATE_DETAILS="${UPDATE_DETAILS}- postgres: ${current_pg} → ${latest_pg}\n"
+          fi
+
+          # Check prometheus
+          current_prom=$(grep -E "image: prom/prometheus:" docker-compose.monitoring.yml | awk '{print $2}' | cut -d: -f2)
+          latest_prom=$(get_latest_dockerhub "prom/prometheus" "$current_prom")
+          if [ "$latest_prom" != "$current_prom" ]; then
+            HAS_UPDATES=true
+            IMAGES_TO_UPDATE="${IMAGES_TO_UPDATE} prom/prometheus:${current_prom}>${latest_prom}"
+            UPDATE_DETAILS="${UPDATE_DETAILS}- prom/prometheus: ${current_prom} → ${latest_prom}\n"
+          fi
+
+          # Check grafana
+          current_grafana=$(grep -E "image: grafana/grafana:" docker-compose.monitoring.yml | awk '{print $2}' | cut -d: -f2)
+          latest_grafana=$(get_latest_dockerhub "grafana/grafana" "$current_grafana")
+          if [ "$latest_grafana" != "$current_grafana" ]; then
+            HAS_UPDATES=true
+            IMAGES_TO_UPDATE="${IMAGES_TO_UPDATE} grafana/grafana:${current_grafana}>${latest_grafana}"
+            UPDATE_DETAILS="${UPDATE_DETAILS}- grafana/grafana: ${current_grafana} → ${latest_grafana}\n"
+          fi
+
+          # Check alertmanager
+          current_alert=$(grep -E "image: prom/alertmanager:" docker-compose.monitoring.yml | awk '{print $2}' | cut -d: -f2)
+          latest_alert=$(get_latest_dockerhub "prom/alertmanager" "$current_alert")
+          if [ "$latest_alert" != "$current_alert" ]; then
+            HAS_UPDATES=true
+            IMAGES_TO_UPDATE="${IMAGES_TO_UPDATE} prom/alertmanager:${current_alert}>${latest_alert}"
+            UPDATE_DETAILS="${UPDATE_DETAILS}- prom/alertmanager: ${current_alert} → ${latest_alert}\n"
+          fi
+
+          # Check node-exporter
+          current_node=$(grep -E "image: prom/node-exporter:" docker-compose.monitoring.yml | awk '{print $2}' | cut -d: -f2)
+          latest_node=$(get_latest_dockerhub "prom/node-exporter" "$current_node")
+          if [ "$latest_node" != "$current_node" ]; then
+            HAS_UPDATES=true
+            IMAGES_TO_UPDATE="${IMAGES_TO_UPDATE} prom/node-exporter:${current_node}>${latest_node}"
+            UPDATE_DETAILS="${UPDATE_DETAILS}- prom/node-exporter: ${current_node} → ${latest_node}\n"
+          fi
+
+          # Check open-webui
+          current_webui=$(grep -E "image: ghcr.io/open-webui/open-webui:" docker-compose.yml | awk '{print $2}' | cut -d: -f2)
+          latest_webui=$(get_latest_ghcr "open-webui/open-webui" "$current_webui")
+          if [ "$latest_webui" != "$current_webui" ]; then
+            HAS_UPDATES=true
+            IMAGES_TO_UPDATE="${IMAGES_TO_UPDATE} open-webui:${current_webui}>${latest_webui}"
+            UPDATE_DETAILS="${UPDATE_DETAILS}- open-webui: ${current_webui} → ${latest_webui}\n"
+          fi
+
+          echo "has-updates=$HAS_UPDATES" >> $GITHUB_OUTPUT
+          echo "images-to-update=$IMAGES_TO_UPDATE" >> $GITHUB_OUTPUT
+          echo "update-details<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$UPDATE_DETAILS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          if [ "$HAS_UPDATES" = "true" ]; then
+            echo "🎉 Updates found!"
+            echo -e "$UPDATE_DETAILS"
+          else
+            echo "✅ All images up to date"
+          fi
+
+  # Apply updates directly to main
+  apply-updates:
+    name: Apply Docker Updates to Main
+    needs: check-docker-updates
+    if: needs.check-docker-updates.outputs.has-updates == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update Docker images
+        run: |
+          # Function to update image in a file
+          update_image() {
+            local file=$1
+            local old=$2
+            local new=$3
+
+            if grep -q "$old" "$file"; then
+              sed -i "s|$old|$new|g" "$file"
+              echo "✓ Updated $file: $old → $new"
+            fi
+          }
+
+          # Get updates from outputs
+          DETAILS='${{ needs.check-docker-updates.outputs.update-details }}'
+
+          # Update postgres
+          current_pg=$(grep -E "image: postgres:" docker-compose.yml | awk '{print $2}')
+          latest_pg=$(curl -s "https://hub.docker.com/v2/repositories/library/postgres/tags/?page_size=100" | jq -r '.results[] | select(.name | test("^[0-9]+")) | .name' | sort -V | tail -n 1)
+          if [ "$current_pg" != "postgres:$latest_pg" ]; then
+            update_image "docker-compose.yml" "$current_pg" "postgres:$latest_pg"
+            update_image "docker-compose.prod.yml" "$current_pg" "postgres:$latest_pg"
+          fi
+
+          # Update prometheus
+          current_prom=$(grep -E "image: prom/prometheus:" docker-compose.monitoring.yml | awk '{print $2}')
+          latest_prom=$(curl -s "https://hub.docker.com/v2/repositories/prom/prometheus/tags/?page_size=100" | jq -r '.results[] | select(.name | test("^[0-9]+\\.[0-9]+")) | .name' | sort -V | tail -n 1)
+          if [ "$current_prom" != "prom/prometheus:$latest_prom" ]; then
+            update_image "docker-compose.monitoring.yml" "$current_prom" "prom/prometheus:$latest_prom"
+          fi
+
+          # Update grafana
+          current_grafana=$(grep -E "image: grafana/grafana:" docker-compose.monitoring.yml | awk '{print $2}')
+          latest_grafana=$(curl -s "https://hub.docker.com/v2/repositories/grafana/grafana/tags/?page_size=100" | jq -r '.results[] | select(.name | test("^[0-9]+\\.[0-9]+")) | .name' | sort -V | tail -n 1)
+          if [ "$current_grafana" != "grafana/grafana:$latest_grafana" ]; then
+            update_image "docker-compose.monitoring.yml" "$current_grafana" "grafana/grafana:$latest_grafana"
+          fi
+
+          # Update alertmanager
+          current_alert=$(grep -E "image: prom/alertmanager:" docker-compose.monitoring.yml | awk '{print $2}')
+          latest_alert=$(curl -s "https://hub.docker.com/v2/repositories/prom/alertmanager/tags/?page_size=100" | jq -r '.results[] | select(.name | test("^[0-9]+\\.[0-9]+")) | .name' | sort -V | tail -n 1)
+          if [ "$current_alert" != "prom/alertmanager:$latest_alert" ]; then
+            update_image "docker-compose.monitoring.yml" "$current_alert" "prom/alertmanager:$latest_alert"
+          fi
+
+          # Update node-exporter
+          current_node=$(grep -E "image: prom/node-exporter:" docker-compose.monitoring.yml | awk '{print $2}')
+          latest_node=$(curl -s "https://hub.docker.com/v2/repositories/prom/node-exporter/tags/?page_size=100" | jq -r '.results[] | select(.name | test("^[0-9]+\\.[0-9]+")) | .name' | sort -V | tail -n 1)
+          if [ "$current_node" != "prom/node-exporter:$latest_node" ]; then
+            update_image "docker-compose.monitoring.yml" "$current_node" "prom/node-exporter:$latest_node"
+          fi
+
+          # Update open-webui
+          current_webui=$(grep -E "image: ghcr.io/open-webui/open-webui:" docker-compose.yml | awk '{print $2}')
+          latest_webui=$(curl -s "https://api.github.com/repos/open-webui/open-webui/releases" | jq -r '[.[].tag_name | select(startswith("v"))][0]' | sed 's/^v//')
+          if [ "$current_webui" != "ghcr.io/open-webui/open-webui:$latest_webui" ]; then
+            update_image "docker-compose.yml" "$current_webui" "ghcr.io/open-webui/open-webui:$latest_webui"
+            update_image "docker-compose.prod.yml" "$current_webui" "ghcr.io/open-webui/open-webui:$latest_webui"
+          fi
+
+      - name: Validate docker-compose files
+        run: |
+          echo "Validating all docker-compose files..."
+          for file in docker-compose*.yml; do
+            echo "✓ Checking $file..."
+            docker compose -f "$file" config > /dev/null 2>&1 || { echo "✗ $file is invalid!"; exit 1; }
+          done
+          echo "✅ All compose files are valid"
+
+      - name: Show changes
+        run: |
+          echo "### Changes to be committed:"
+          git diff --name-only
+          echo ""
+          echo "### Detailed diff:"
+          git diff docker-compose*.yml
+
+      - name: Commit and push to main
+        run: |
+          git add docker-compose*.yml
+
+          # Create commit message with details
+          DETAILS='${{ needs.check-docker-updates.outputs.update-details }}'
+          cat > /tmp/commit_msg << EOF
+          chore(docker): update Docker images to latest versions
+
+          Updated Docker images:
+          ${DETAILS}
+
+          - All compose files validated
+          - Automatic update via GitHub Actions
+
+          [skip ci]
+          EOF
+
+          git commit -F /tmp/commit_msg
+          git push
+
+          echo "✅ Pushed to main branch"
+
+  # Trigger version bump and release
+  create-release:
+    name: Trigger Auto Version & Release
+    needs: apply-updates
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Wait for CI to complete
+        run: |
+          echo "Waiting for CI checks to pass..."
+          sleep 30
+
+      - name: Trigger Auto Version workflow
+        run: |
+          # The auto-version workflow will trigger on push to main
+          echo "✅ Auto-version workflow triggered automatically"
+          echo "🚀 New release will be created shortly"
+
+  # Create summary
+  summary:
+    name: Create Summary
+    needs: [check-docker-updates, apply-updates, create-release]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create summary
+        run: |
+          echo "## 🐳 Docker Image Auto-Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ needs.check-docker-updates.outputs.has-updates == 'true' && needs.apply-updates.result == 'success' && '✅ Updates Applied' || '⚠️ No Updates or Failed' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Updates Applied:" >> $GITHUB_STEP_SUMMARY
+          echo '${{ needs.check-docker-updates.outputs.update-details }}' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What happens next:" >> $GITHUB_STEP_SUMMARY
+          echo "1. ✅ Docker images updated in docker-compose files" >> $GITHUB_STEP_SUMMARY
+          echo "2. ✅ Changes pushed to main branch" >> $GITHUB_STEP_SUMMARY
+          echo "3. ⏳ Auto-version workflow creating new release" >> $GITHUB_STEP_SUMMARY
+          echo "4. 🚀 New GitHub release will be published" >> $GITHUB_STEP_SUMMARY
+
+  # Notify when no updates
+  no-updates:
+    name: No Updates
+    needs: check-docker-updates
+    if: needs.check-docker-updates.outputs.has-updates == 'false'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: All up to date
+        run: |
+          echo "✅ All Docker images are up to date!"
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ All Docker Images Up to Date" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No updates needed at this time." >> $GITHUB_STEP_SUMMARY

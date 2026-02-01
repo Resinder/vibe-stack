@@ -1,44 +1,56 @@
 # ============================================================================
 # Vibe Stack - Docker Compose Configuration
 # ============================================================================
-# Production-ready Docker orchestration for:
-#   - Vibe-Kanban: AI agent orchestration platform
-#   - Claude Code: AI-powered coding assistant
-#   - code-server: Browser-based VS Code
+# Production-ready Docker orchestration for 4 services:
+#   - Vibe-Kanban: AI agent orchestration platform (port 4000)
+#   - code-server: Browser-based VS Code (port 8443)
+#   - Open WebUI: AI chat interface for task planning (port 8081)
+#   - MCP Server: API bridge with 10 tools (port 4001)
 #
 # Compose Specification: V2 (version key deprecated/omitted)
 # Image Strategy: :latest tags with enhanced health monitoring
-# Documentation: See README.md and HELPER.md
+# Documentation: See README.md and docs/HELPER.md
 # ============================================================================
 
 services:
   # ============================================================================
   # VIBE-KANBAN SERVICE (AI Agent Orchestration)
   # ============================================================================
+  # External project: https://github.com/BloopAI/vibe-kanban
+  # Cloned to: ./repos/vibe-kanban
+  # Update: cd repos/vibe-kanban && git pull
   vibe-kanban:
-    # Using :latest for Node.js LTS (auto-updates with security patches)
-    # Health checks detect breaking changes immediately
-    # Reference: https://hub.docker.com/_/node
-    image: node:20-slim
-    container_name: vibe-server
-    working_dir: /app
+    build:
+      context: ./repos/vibe-kanban
+      dockerfile: Dockerfile
+      args:
+        POSTHOG_API_KEY: ${POSTHOG_API_KEY:-}
+        POSTHOG_API_ENDPOINT: ${POSTHOG_API_ENDPOINT:-}
+    image: vibe-kanban:latest
+    container_name: vibe-kanban
+    restart: unless-stopped
 
-    # Network ports
+    # Network ports (vibe-kanban uses port 3000 by default)
     ports:
-      - "4000:4000"      # Vibe-Kanban primary port
+      - "4000:3000"      # Map host 4000 to container 3000
       - "3000-3100:3000-3100"  # Dev server port range for projects
 
     # Environment variables
     environment:
-      - PORT=4000
       - HOST=0.0.0.0
-      - NODE_ENV=production
+      - PORT=3000
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-vibeuser}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-vibepass}
+      - POSTGRES_DB=${POSTGRES_DB:-vibestack}
+      - VIBE_BOARD_DEFAULT_FILE=/data/.vibe-kanban-board.json
 
     # Volume mounts
     volumes:
-      # Vibe-Kanban configuration and data persistence
-      - vibe_config:/home/node/.vibe-kanban
-      - vibe_data:/home/node/.local/share/vibe-kanban
+      # Vibe-Kanban data persistence
+      - vibe_config:/data
+      - vibe_data:/repos
 
       # Workspace directory for projects
       - ./repos:/repos
@@ -49,58 +61,43 @@ services:
       # Project secrets (read-only, isolated from agent)
       - ./secrets:/root/secrets:ro
 
-      # Claude Code configuration (agent-accessible)
-      - ./agents/claude:/home/node/.claude
-
-      # Development server script
-      - ./dev-server.sh:/usr/local/bin/dev-server.sh:ro
-
-      # Docker entrypoint script
-      - ./scripts/docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh:ro
-
-    # Use the entrypoint script for container setup
-    entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
-
     # Health check - verifies Vibe-Kanban is responding
-    # Fast interval (15s) for quick detection of breaking changes
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
       interval: 15s
       timeout: 10s
       retries: 3
       start_period: 60s
 
-    # Resource constraints (prevent runaway processes)
+    # Resource constraints (vibe-kanban is Rust + Node frontend, needs more resources)
     deploy:
       resources:
         limits:
-          cpus: '2.0'      # Maximum 2 CPU cores
-          memory: 2G       # Maximum 2GB RAM
+          cpus: '4.0'
+          memory: 4G
         reservations:
-          cpus: '0.5'      # Minimum 0.5 CPU cores
-          memory: 512M     # Minimum 512MB RAM
+          cpus: '1.0'
+          memory: 1G
 
-    # Restart policy
-    restart: unless-stopped
-
-    # Dependency on code-server (optional, for workspace consistency)
+    # Dependency on PostgreSQL
     depends_on:
-      code-server:
+      postgres:
         condition: service_healthy
 
   # ============================================================================
   # CODE-SERVER SERVICE (Browser-based VS Code)
   # ============================================================================
   code-server:
-    # Using :latest for automatic updates
-    # Health checks detect breaking changes immediately
-    # Reference: https://hub.docker.com/r/codercom/code-server
-    image: codercom/code-server:latest
+    # VS Code in browser - latest
+    # Using latest tag as linuxserver doesn't use semantic versioning
+    # Auto-updated via Renovate
+    # Reference: https://github.com/linuxserver/docker-code-server
+    image: lscr.io/linuxserver/code-server:latest
     container_name: code-server
 
-    # Network ports (internal 8080 mapped to external 8443)
+    # Network ports (linuxserver/code-server uses port 8443 internally)
     ports:
-      - "8443:8080"
+      - "8443:8443"
 
     # Environment variables
     environment:
@@ -123,7 +120,7 @@ services:
     # Note: /health endpoint requires auth, so we check root endpoint instead
     # Reference: https://github.com/coder/code-server/issues/5461
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8443/"]
       interval: 15s
       timeout: 10s
       retries: 3
@@ -156,10 +153,11 @@ services:
   # OPEN WEBUI SERVICE (AI Model Interface)
   # ============================================================================
   open-webui:
-    # Open WebUI provides a web interface for AI model interaction
+    # AI chat interface - v0.7.2 (latest)
+    # Pinned for stability - auto-updated via Renovate
     # Supports: OpenAI, Anthropic, Google, Ollama (local), and custom endpoints
     # Reference: https://github.com/open-webui/open-webui
-    image: ghcr.io/open-webui/open-webui:main
+    image: ghcr.io/open-webui/open-webui:v0.7.2
     container_name: open-webui
 
     # Network ports (moved to 8081 to avoid conflicts)
@@ -213,11 +211,12 @@ services:
   mcp-server:
     # Enhanced Model Context Protocol server for Vibe Stack integration
     # Features: intelligent planning, real-time sync, webhook support
-    image: node:20-alpine
+    # Multi-stage build: base -> dependencies -> production
     container_name: vibe-mcp-server
     build:
-      context: ./mcp-server/enhanced
+      context: ./mcp-server
       dockerfile: Dockerfile
+      target: production
 
     # Network ports
     ports:
@@ -228,16 +227,22 @@ services:
       - BRIDGE_FILE=/data/.vibe-kanban-bridge.json
       - HTTP_PORT=4001
       - NODE_ENV=production
+      # PostgreSQL connection
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGDATABASE=${POSTGRES_DB:-vibestack}
+      - PGUSER=${POSTGRES_USER:-vibeuser}
+      - PGPASSWORD=${POSTGRES_PASSWORD:-vibepass}
+      # Credential encryption (REQUIRED in production)
+      # Set in .env file: CREDENTIAL_ENCRYPTION_KEY=$(openssl rand -base64 48)
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
 
     # Volume mounts
     volumes:
-      # Mount source for hot-reload in development
-      - ./mcp-server/enhanced:/app
       # Mount bridge file for board state (read-write for updates)
       - ./.vibe-kanban-bridge.json:/data/.vibe-kanban-bridge.json
       # Mount custom panel for Open WebUI
-      - ./open-webui-custom:/custom:ro
-      - /app/node_modules
+      - ./services/open-webui-custom:/custom:ro
 
     # Health check
     healthcheck:
@@ -264,6 +269,42 @@ services:
     depends_on:
       vibe-kanban:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  # ============================================================================
+  # POSTGRESQL DATABASE (For state management and persistence)
+  # ============================================================================
+  postgres:
+    # PostgreSQL 18.1 - Alpine Linux for minimal footprint
+    # Pinned for stability - auto-updated via Renovate
+    image: postgres:18.1-alpine
+    container_name: vibe-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=vibestack
+      - POSTGRES_USER=vibeuser
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-vibepass}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vibeuser -d vibestack"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
 
 # ============================================================================
 # PERSISTENT VOLUMES
@@ -283,4 +324,8 @@ volumes:
 
   # Open WebUI data (chats, models, settings)
   open_webui_data:
+    driver: local
+
+  # PostgreSQL data (for state management and persistence)
+  postgres_data:
     driver: local

@@ -1,0 +1,191 @@
+# Vibe Stack - Production Docker Compose Configuration
+# This file is optimized for production deployments with enhanced security and performance
+
+services:
+  # Vibe-Kanban - AI Agent Orchestration Platform
+  vibe-kanban:
+    image: vibe-stack/vibe-kanban:latest
+    container_name: vibe-kanban-prod
+    restart: unless-stopped
+    ports:
+      - "${VIBE_PORT:-4000}:4000"
+    volumes:
+      - ./config/state:/app/config:rw
+      - ./logs:/app/logs:rw
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    networks:
+      - vibe-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # MCP Server - API Bridge with 10 Tools
+  mcp-server:
+    image: vibe-stack/mcp-server:latest
+    container_name: mcp-server-prod
+    restart: unless-stopped
+    ports:
+      - "${MCP_PORT:-4001}:4001"
+    volumes:
+      - ./config/state:/app/config:rw
+      - ./logs:/app/logs:rw
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - PORT=4001
+      - API_KEYS=${API_KEYS}
+      - JWT_SECRET=${JWT_SECRET}
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    networks:
+      - vibe-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Open WebUI - AI Chat Interface for Task Planning
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:v0.7.2
+    container_name: open-webui-prod
+    restart: unless-stopped
+    ports:
+      - "${OPEN_WEBUI_PORT:-8081}:8080"
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+    volumes:
+      - open-webui-data:/app/backend/data:rw
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - vibe-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # code-server - Browser-based VS Code
+  code-server:
+    image: lscr.io/linuxserver/code-server:latest
+    container_name: code-server-prod
+    restart: unless-stopped
+    ports:
+      - "${CODE_SERVER_PORT:-8443}:8443"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - PASSWORD=${CODE_SERVER_PASSWORD}
+      - HASHED_PASSWORD=
+      - SUDO_PASSWORD=false
+      - PROXY_DOMAIN=code-server.yourdomain.com
+    volumes:
+      - ./repos:/config/workspace:rw
+      - code-server-data:/config:rw
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8443/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - vibe-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    container_name: vibe-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/nginx/ssl:/etc/nginx/ssl:ro
+      - ./config/nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - vibe-kanban
+      - mcp-server
+      - open-webui
+      - code-server
+    networks:
+      - vibe-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+networks:
+  vibe-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  open-webui-data:
+    driver: local
+  code-server-data:
+    driver: local

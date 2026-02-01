@@ -1,0 +1,52 @@
+{
+  "_comment": "Slack MCP Server Configuration - Official",
+  "_version": "1.0.0",
+  "name": "slack-official",
+  "enabled": false,
+  "prefix": "slack",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-slack"],
+  "env": {
+    "SLACK_TOKEN": "${SLACK_MCP_TOKEN}",
+    "SLACK_DEFAULT_CHANNEL": "${SLACK_MCP_DEFAULT_CHANNEL}"
+  },
+  "description": "Official Slack MCP server for team communication and notifications",
+  "tools": [
+    "send_message",
+    "add_reaction",
+    "get_channel_info",
+    "list_channels",
+    "create_channel",
+    "invite_to_channel"
+  ],
+  "features": {
+    "authentication": "Slack Bot Token required (xoxb-*)",
+    "real_time_updates": "Supported via Slack API",
+    "message_formatting": "Full markdown and block kit support",
+    "file_sharing": "Supported for uploads and sharing"
+  },
+  "configuration": {
+    "token_source": "SLACK_MCP_TOKEN environment variable",
+    "token_type": "Bot User OAuth Token",
+    "default_channel": "SLACK_MCP_DEFAULT_CHANNEL environment variable",
+    "required_scopes": [
+      "chat:write",
+      "channels:read",
+      "channels:manage",
+      "reactions:write",
+      "files:write"
+    ]
+  },
+  "setup": {
+    "step_1": "Create a Slack App at https://api.slack.com/apps",
+    "step_2": "Enable Bot User and install in workspace",
+    "step_3": "Copy Bot User OAuth Token (starts with xoxb-)",
+    "step_4": "Set SLACK_MCP_TOKEN environment variable",
+    "step_5": "Configure required scopes in Slack App"
+  },
+  "usage_examples": {
+    "send_notification": "Send task completion notifications",
+    "alert_on_error": "Send error alerts to specified channels",
+    "team_collaboration": "Share updates and collaborate with team"
+  }
+}

@@ -1,0 +1,127 @@
+name: Auto Version
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'mcp-server/src/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'mcp-server/tests/**'
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version increment type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    name: Auto Increment Version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Determine version type
+        id: version_type
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "type=${{ github.event.inputs.version_type }}" >> $GITHUB_OUTPUT
+          else
+            # Analyze commit messages to determine version type
+            echo "type=patch" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Increment version
+        run: |
+          npm run version:${{ steps.version_type.outputs.type }}
+
+      - name: Get new version
+        id: new_version
+        run: |
+          VERSION=$(node scripts/utils/version.js get)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $VERSION"
+
+      - name: Run tests
+        run: |
+          npm test
+
+      - name: Update CHANGELOG
+        run: |
+          VERSION="${{ steps.new_version.outputs.version }}"
+          DATE=$(date +%Y-%m-%d)
+
+          cat > CHANGELOG_ENTRY.md << EOF
+          ## [$VERSION] - $DATE
+
+          ### Automated Changes
+          - Auto-incremented version based on commits
+
+          ### Changes in this release
+          EOF
+
+          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD@{1})..HEAD >> CHANGELOG_ENTRY.md
+          echo "" >> CHANGELOG_ENTRY.md
+
+          if [ -f CHANGELOG.md ]; then
+            tail -n +2 CHANGELOG.md > TEMP.md
+            cat CHANGELOG_ENTRY.md > CHANGELOG.md
+            cat TEMP.md >> CHANGELOG.md
+            rm TEMP.md CHANGELOG_ENTRY.md
+          else
+            cat CHANGELOG_ENTRY.md > CHANGELOG.md
+          fi
+
+      - name: Commit and push changes
+        run: |
+          VERSION="${{ steps.new_version.outputs.version }}"
+          git add version.json package.json mcp-server/package.json CHANGELOG.md
+          git commit -m "chore: bump version to $VERSION
+
+          [skip ci]"
+          git push
+
+      - name: Create tag
+        run: |
+          VERSION="${{ steps.new_version.outputs.version }}"
+          git tag -a "v$VERSION" -m "Release version $VERSION"
+          git push origin "v$VERSION"
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.new_version.outputs.version }}
+          release_name: Release v${{ steps.new_version.outputs.version }}
+          body: |
+            ## Release v${{ steps.new_version.outputs.version }}
+
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+          draft: false
+          prerelease: false

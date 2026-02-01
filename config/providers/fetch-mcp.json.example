@@ -1,0 +1,44 @@
+{
+  "_comment": "Fetch MCP Server Configuration - Official",
+  "_version": "1.0.0",
+  "name": "fetch",
+  "enabled": false,
+  "prefix": "fetch",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-fetch"],
+  "env": {},
+  "description": "Official Fetch MCP server for making HTTP requests and API calls",
+  "tools": [
+    "fetch",
+    "get",
+    "post",
+    "put",
+    "delete",
+    "patch",
+    "head",
+    "options"
+  ],
+  "features": {
+    "authentication": "No API key required",
+    "capabilities": "Full HTTP client with headers, body, redirects",
+    "supported_protocols": "HTTP, HTTPS",
+    "response_handling": "JSON, text, binary, headers"
+  },
+  "configuration": {
+    "timeout": 30000,
+    "max_redirects": 5,
+    "user_agent": "Vibe-Stack-MCP/2.1.0"
+  },
+  "use_cases": {
+    "api_calls": "Make REST API calls to any service",
+    "webhooks": "Trigger webhooks",
+    "data_retrieval": "Fetch data from external APIs",
+    "testing": "Test API endpoints",
+    "integration": "Integrate with third-party services"
+  },
+  "headers_support": {
+    "authentication": "Bearer token, Basic auth, custom headers",
+    "content_type": "application/json, text/plain, multipart/form-data",
+    "custom": "Any custom header supported"
+  }
+}

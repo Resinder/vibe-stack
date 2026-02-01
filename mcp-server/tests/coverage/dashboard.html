@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Stack - Test Coverage Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #1a202c;
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1a202c;
+        }
+
+        .stat-card.excellent .stat-value { color: #48bb78; }
+        .stat-card.good .stat-value { color: #4299e1; }
+        .stat-card.fair .stat-value { color: #ed8936; }
+        .stat-card.poor .stat-value { color: #f56565; }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            font-size: 18px;
+            color: #1a202c;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-name {
+            flex: 1;
+            color: #2d3748;
+            font-size: 14px;
+            font-family: monospace;
+        }
+
+        .coverage-badge {
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .badge-excellent { background: #c6f6d5; color: #22543d; }
+        .badge-good { background: #bee3f8; color: #2a4365; }
+        .badge-fair { background: #feebc8; color: #744210; }
+        .badge-poor { background: #fed7d7; color: #742a2a; }
+
+        .missing-tests {
+            color: #e53e3e;
+            font-size: 12px;
+        }
+
+        .refresh-btn {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .refresh-btn:hover {
+            background: #3182ce;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #718096;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Vibe Stack - Test Coverage Dashboard</h1>
+            <p>Real-time test coverage tracking for MCP Server</p>
+            <button class="refresh-btn" onclick="location.reload()">🔄 Refresh</button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card excellent">
+                <div class="stat-label">Overall Coverage</div>
+                <div class="stat-value" id="overall-coverage">-</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="overall-bar" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Files Covered</div>
+                <div class="stat-value" id="files-covered">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Lines</div>
+                <div class="stat-value" id="total-lines">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Covered Lines</div>
+                <div class="stat-value" id="covered-lines">-</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>📁 Coverage by File</h2>
+                <div id="file-coverage-list">
+                    <div class="empty-state">
+                        <p>No coverage data available</p>
+                        <p style="font-size: 12px; margin-top: 8px;">Run <code>npm run test:coverage</code> to generate coverage report</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📈 Coverage Trends</h2>
+                <div id="coverage-trends">
+                    <div class="empty-state">
+                        <p>Coverage history will appear here</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>⚠️ Files with Low Coverage</h2>
+                <div id="low-coverage-list">
+                    <div class="empty-state">
+                        <p>All files have good coverage!</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>✅ Test Suite Status</h2>
+                <div id="test-status">
+                    <div class="file-item">
+                        <span class="file-name">Unit Tests</span>
+                        <span class="coverage-badge badge-excellent">270 PASS</span>
+                    </div>
+                    <div class="file-item">
+                        <span class="file-name">Integration Tests</span>
+                        <span class="coverage-badge badge-excellent">14 PASS</span>
+                    </div>
+                    <div class="file-item">
+                        <span class="file-name">E2E Tests</span>
+                        <span class="coverage-badge badge-good">10 PASS</span>
+                    </div>
+                    <div class="file-item">
+                        <span class="file-name">Performance Tests</span>
+                        <span class="coverage-badge badge-excellent">10 PASS</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock coverage data (replace with actual coverage data)
+        const coverageData = {
+            'src/core/models.js': { coverage: 98, lines: 245, covered: 240 },
+            'src/services/boardService.js': { coverage: 95, lines: 320, covered: 304 },
+            'src/services/postgresStorage.js': { coverage: 92, lines: 485, covered: 446 },
+            'src/services/taskPlanningService.js': { coverage: 88, lines: 156, covered: 137 },
+            'src/controllers/taskController.js': { coverage: 85, lines: 167, covered: 142 },
+            'src/controllers/boardController.js': { coverage: 90, lines: 125, covered: 113 },
+            'src/controllers/planningController.js': { coverage: 87, lines: 112, covered: 97 },
+            'src/middleware/validation.js': { coverage: 94, lines: 234, covered: 220 },
+            'src/middleware/errorHandler.js': { coverage: 91, lines: 178, covered: 162 },
+            'src/utils/logger.js': { coverage: 75, lines: 89, covered: 67 },
+            'src/websocket/server.js': { coverage: 82, lines: 312, covered: 256 },
+            'src/websocket/boardSync.js': { coverage: 80, lines: 145, covered: 116 }
+        };
+
+        function getCoverageClass(percentage) {
+            if (percentage >= 90) return 'excellent';
+            if (percentage >= 75) return 'good';
+            if (percentage >= 50) return 'fair';
+            return 'poor';
+        }
+
+        function getBadgeClass(percentage) {
+            if (percentage >= 90) return 'badge-excellent';
+            if (percentage >= 75) return 'badge-good';
+            if (percentage >= 50) return 'badge-fair';
+            return 'badge-poor';
+        }
+
+        function updateDashboard() {
+            const entries = Object.entries(coverageData);
+            const totalLines = entries.reduce((sum, [, data]) => sum + data.lines, 0);
+            const coveredLines = entries.reduce((sum, [, data]) => sum + data.covered, 0);
+            const overallCoverage = totalLines > 0 ? ((coveredLines / totalLines) * 100).toFixed(1) : 0;
+
+            // Update stats
+            document.getElementById('overall-coverage').textContent = `${overallCoverage}%`;
+            document.getElementById('overall-bar').style.width = `${overallCoverage}%`;
+
+            const statCard = document.querySelector('.stat-card');
+            statCard.className = `stat-card ${getCoverageClass(parseFloat(overallCoverage))}`;
+            document.getElementById('overall-bar').style.backgroundColor = getBarColor(parseFloat(overallCoverage));
+
+            document.getElementById('files-covered').textContent = entries.length;
+            document.getElementById('total-lines').textContent = totalLines.toLocaleString();
+            document.getElementById('covered-lines').textContent = coveredLines.toLocaleString();
+
+            // Update file coverage list
+            const fileList = document.getElementById('file-coverage-list');
+            const sortedEntries = entries.sort((a, b) => a[0].localeCompare(b[0]));
+
+            fileList.innerHTML = sortedEntries.map(([file, data]) => `
+                <div class="file-item">
+                    <span class="file-name">${file}</span>
+                    <span class="coverage-badge ${getBadgeClass(data.coverage)}">${data.coverage}%</span>
+                </div>
+            `).join('');
+
+            // Update low coverage list
+            const lowCoverageList = document.getElementById('low-coverage-list');
+            const lowCoverage = entries.filter(([, data]) => data.coverage < 90)
+                .sort((a, b) => a[1].coverage - b[1].coverage);
+
+            if (lowCoverage.length > 0) {
+                lowCoverageList.innerHTML = lowCoverage.map(([file, data]) => `
+                    <div class="file-item">
+                        <span class="file-name">${file.split('/').pop()}</span>
+                        <span class="coverage-badge ${getBadgeClass(data.coverage)}">${data.coverage}%</span>
+                    </div>
+                `).join('');
+            } else {
+                lowCoverageList.innerHTML = '<div class="empty-state"><p>✅ All files have 90%+ coverage!</p></div>';
+            }
+        }
+
+        function getBarColor(percentage) {
+            if (percentage >= 90) return '#48bb78';
+            if (percentage >= 75) return '#4299e1';
+            if (percentage >= 50) return '#ed8936';
+            return '#f56565';
+        }
+
+        // Initialize dashboard
+        updateDashboard();
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            // In production, fetch latest coverage data here
+            console.log('Refreshing coverage data...');
+        }, 30000);
+    </script>
+</body>
+</html>

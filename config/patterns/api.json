@@ -1,0 +1,110 @@
+{
+  "_comment": "API & Backend Services pattern for task generation",
+  "name": "api",
+  "displayName": "API & Backend Services",
+  "description": "Complete REST/GraphQL API with routing, controllers, validation, authentication, and documentation",
+  "keywords": [
+    "api",
+    "rest",
+    "graphql",
+    "backend",
+    "server",
+    "endpoint",
+    "route",
+    "controller",
+    "middleware",
+    "validation",
+    "swagger",
+    "openapi",
+    "documentation",
+    "http",
+    "request",
+    "response",
+    "json",
+    "xml",
+    "webhook",
+    "rate-limiting",
+    "cors"
+  ],
+  "estimatedHours": 67,
+  "taskCount": 10,
+  "priorityDistribution": {
+    "high": 7,
+    "medium": 3,
+    "low": 0
+  },
+  "tasks": [
+    {
+      "title": "Design API architecture",
+      "description": "Design REST/GraphQL API architecture with resource modeling, versioning strategy, and error handling",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["design", "architecture", "api"]
+    },
+    {
+      "title": "Set up API server framework",
+      "description": "Initialize Express/Fastify/Nest.js with TypeScript, middleware, and basic routing",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["setup", "framework", "backend"]
+    },
+    {
+      "title": "Implement routing & controllers",
+      "description": "Create API routes, controllers, and request handlers following RESTful or GraphQL conventions",
+      "priority": "high",
+      "estimatedHours": 12,
+      "tags": ["routing", "controllers", "api"]
+    },
+    {
+      "title": "Add input validation",
+      "description": "Implement request validation using schemas (Joi, Zod, Yup) with proper error messages",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["validation", "security", "api"]
+    },
+    {
+      "title": "Implement authentication middleware",
+      "description": "Add JWT/token-based authentication middleware with protected routes",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["authentication", "security", "middleware"]
+    },
+    {
+      "title": "Add error handling middleware",
+      "description": "Implement global error handling with logging, status codes, and error responses",
+      "priority": "high",
+      "estimatedHours": 6,
+      "tags": ["error-handling", "middleware", "api"]
+    },
+    {
+      "title": "Set up API documentation",
+      "description": "Create OpenAPI/Swagger documentation with request/response examples",
+      "priority": "medium",
+      "estimatedHours": 8,
+      "tags": ["documentation", "swagger", "api"]
+    },
+    {
+      "title": "Implement rate limiting",
+      "description": "Add rate limiting to prevent abuse with configurable limits per endpoint",
+      "priority": "medium",
+      "estimatedHours": 6,
+      "tags": ["rate-limiting", "security", "api"]
+    },
+    {
+      "title": "Add CORS & security headers",
+      "description": "Configure CORS policies and security headers (CSP, HSTS, X-Frame-Options)",
+      "priority": "high",
+      "estimatedHours": 4,
+      "tags": ["cors", "security", "headers"]
+    },
+    {
+      "title": "Set up API testing",
+      "description": "Create integration tests for API endpoints with test data and mocking",
+      "priority": "high",
+      "estimatedHours": 10,
+      "tags": ["testing", "api", "integration"]
+    }
+  ],
+  "dependencies": [],
+  "relatedPatterns": ["authentication", "database", "deployment"]
+}

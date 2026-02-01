@@ -1,0 +1,93 @@
+{
+  "_comment": "Testing & Quality Assurance pattern for task generation",
+  "name": "testing",
+  "displayName": "Testing & Quality Assurance",
+  "description": "Complete testing setup with unit tests, integration tests, E2E tests, and CI/CD integration",
+  "keywords": [
+    "test",
+    "testing",
+    "unit",
+    "integration",
+    "e2e",
+    "end-to-end",
+    "jest",
+    "vitest",
+    "cypress",
+    "playwright",
+    "mocha",
+    "chai",
+    "jasmine",
+    "karma",
+    "coverage",
+    "mock",
+    "stub",
+    "spy",
+    "tdd",
+    "bdd",
+    "ci",
+    "cd",
+    "quality",
+    "assurance",
+    "automation"
+  ],
+  "estimatedHours": 47,
+  "taskCount": 7,
+  "priorityDistribution": {
+    "high": 5,
+    "medium": 2,
+    "low": 0
+  },
+  "tasks": [
+    {
+      "title": "Set up testing framework",
+      "description": "Configure Jest/Vitest with TypeScript, coverage, and test scripts",
+      "priority": "high",
+      "estimatedHours": 6,
+      "tags": ["setup", "jest", "framework"]
+    },
+    {
+      "title": "Write unit tests",
+      "description": "Create comprehensive unit tests for business logic, utilities, and components",
+      "priority": "high",
+      "estimatedHours": 12,
+      "tags": ["unit-tests", "testing", "coverage"]
+    },
+    {
+      "title": "Set up integration tests",
+      "description": "Implement integration tests for API endpoints, database operations, and service interactions",
+      "priority": "high",
+      "estimatedHours": 10,
+      "tags": ["integration", "api", "testing"]
+    },
+    {
+      "title": "Configure E2E testing",
+      "description": "Set up Cypress/Playwright for end-to-end testing with browser automation",
+      "priority": "high",
+      "estimatedHours": 10,
+      "tags": ["e2e", "cypress", "automation"]
+    },
+    {
+      "title": "Implement test mocking",
+      "description": "Create mocks and fixtures for external dependencies and test data",
+      "priority": "medium",
+      "estimatedHours": 6,
+      "tags": ["mocking", "fixtures", "testing"]
+    },
+    {
+      "title": "Set up CI/CD testing",
+      "description": "Configure automated testing in CI/CD pipeline with test reports and coverage tracking",
+      "priority": "high",
+      "estimatedHours": 8,
+      "tags": ["ci-cd", "automation", "pipeline"]
+    },
+    {
+      "title": "Implement visual regression testing",
+      "description": "Add visual regression testing for UI components and layouts",
+      "priority": "medium",
+      "estimatedHours": 6,
+      "tags": ["visual", "regression", "ui"]
+    }
+  ],
+  "dependencies": [],
+  "relatedPatterns": ["api", "frontend", "deployment"]
+}
