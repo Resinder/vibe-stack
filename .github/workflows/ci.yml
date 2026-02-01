@@ -198,9 +198,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./mcp-server
-        env:
-          npm_config_prepare: false
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run tests
         working-directory: ./mcp-server
