@@ -1,4 +1,19 @@
-# Changelog
+## [${VERSION}] - ${DATE}
+
+### Automated Changes
+- Auto-incremented version based on commits
+
+### Commits in this release
+- chore: comprehensive version and documentation consistency fixes (d5a454b)
+- refactor: eliminate code duplication and hardcoded values (f189f41)
+- refactor: comprehensive security, validation, and testing improvements (99cd51d)
+- refactor: comprehensive code quality improvements - eliminate spaghetti code (8277179)
+- fix: correct bash comment style in common.sh library (6b4c535)
+- refactor: enhance code quality across the codebase (d465dac)
+- chore: Update GitHub repository URL to Resinder/vibe-stack (ad58c1a)
+- docs: Complete rewrite of all documentation (60ea581)
+- feat: Add OpenAI-compatible API for Open WebUI integration (097d4f3)
+- feat: Enhanced Open WebUI + Vibe Kanban integration (v2.0) (9ead12c)
 
 All notable changes to Vibe Stack will be documented in this file.
 
