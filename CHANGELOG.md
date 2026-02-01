@@ -4,6 +4,12 @@
 - Auto-incremented version based on commits
 
 ### Commits in this release
+- fix: resolve GitHub Actions workflow failures (39aafeb)
+
+### Automated Changes
+- Auto-incremented version based on commits
+
+### Commits in this release
 - chore: comprehensive version and documentation consistency fixes (d5a454b)
 - refactor: eliminate code duplication and hardcoded values (f189f41)
 - refactor: comprehensive security, validation, and testing improvements (99cd51d)
