@@ -161,7 +161,7 @@ jobs:
     needs: validation
     strategy:
       matrix:
-        service: [vibe-kanban, code-server, mcp-server]
+        service: [mcp-server]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
