@@ -4,6 +4,12 @@
 - Auto-incremented version based on commits
 
 ### Commits in this release
+- chore: remove duplicate version and auto-update workflows (0d6c130)
+
+### Automated Changes
+- Auto-incremented version based on commits
+
+### Commits in this release
 - chore: remove duplicate docker-auto-update.yml workflow (d52005e)
 - chore(release): bump version to 1.1.6 (4fc5948)
 - fix: handle skipped status correctly in E2E workflow summary (f4133a1)
