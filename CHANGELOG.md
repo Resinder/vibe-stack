@@ -4,6 +4,12 @@
 - Auto-incremented version based on commits
 
 ### Commits in this release
+- fix: use bash instead of sh for shell script syntax validation (15f2c49)
+
+### Automated Changes
+- Auto-incremented version based on commits
+
+### Commits in this release
 - fix: resolve GitHub Actions workflow failures (39aafeb)
 
 ### Automated Changes
