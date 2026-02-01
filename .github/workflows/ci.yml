@@ -172,7 +172,7 @@ jobs:
       - name: Build service image
         run: |
           echo "Testing build for ${{ matrix.service }}..."
-          docker-compose build --no-cache ${{ matrix.service }}
+          docker compose build --no-cache ${{ matrix.service }}
           echo "✓ ${{ matrix.service }} builds successfully"
 
       - name: Check image size
