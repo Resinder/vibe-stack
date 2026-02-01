@@ -4,6 +4,12 @@
 - Auto-incremented version based on commits
 
 ### Commits in this release
+- fix: skip prepare script during CI to avoid husky install issue (134eaac)
+
+### Automated Changes
+- Auto-incremented version based on commits
+
+### Commits in this release
 - fix: only test buildable services in CI Docker Build test (5b1fcad)
 
 ### Automated Changes
