@@ -198,6 +198,8 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./mcp-server
+        env:
+          npm_config_prepare: false
         run: npm ci
 
       - name: Run tests
