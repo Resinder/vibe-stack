@@ -4,6 +4,12 @@
 - Auto-incremented version based on commits
 
 ### Commits in this release
+- fix: replace remaining docker-compose with docker compose v2 (f208dde)
+
+### Automated Changes
+- Auto-incremented version based on commits
+
+### Commits in this release
 - fix: use bash instead of sh for shell script syntax validation (15f2c49)
 
 ### Automated Changes

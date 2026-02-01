@@ -1,6 +1,6 @@
 # Vibe Stack - MCP Server Complete Guide
 
-Comprehensive guide to the Vibe Stack MCP Server v1.1.2 - the bridge between Open WebUI and Vibe-Kanban.
+Comprehensive guide to the Vibe Stack MCP Server v1.1.3 - the bridge between Open WebUI and Vibe-Kanban.
 
 > **Note:** For basic Vibe Stack installation, see the **[Installation Guide](02-installation.md)**. This guide covers MCP Server specifics.
 
@@ -95,7 +95,7 @@ The **Model Context Protocol (MCP)** is an open protocol that enables AI assista
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Layer Architecture (v1.1.2)
+### Layer Architecture (v1.1.3)
 
 ```
 mcp-server/src/
@@ -578,7 +578,7 @@ services:
 ### Kubernetes Deployment
 
 ```yaml
-apiVersion: apps/v1.1.2
+apiVersion: apps/v1.1.3
 kind: Deployment
 metadata:
   name: mcp-server
