@@ -4,6 +4,13 @@
 - Auto-incremented version based on commits
 
 ### Commits in this release
+- fix: handle skipped status correctly in E2E workflow summary (f4133a1)
+- fix: use --ignore-scripts flag to skip prepare script in CI (6f262f8)
+
+### Automated Changes
+- Auto-incremented version based on commits
+
+### Commits in this release
 - fix: skip prepare script during CI to avoid husky install issue (134eaac)
 
 ### Automated Changes
