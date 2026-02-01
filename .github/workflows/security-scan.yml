@@ -334,17 +334,28 @@ jobs:
     steps:
       - name: Generate security summary
         run: |
+          # Function to get status emoji and text
+          get_status() {
+            local result="$1"
+            local skip_msg="$2"
+            case "$result" in
+              "success") echo "✅ Passed" ;;
+              "skipped") echo "${skip_msg:-⊘ Skipped}" ;;
+              *) echo "❌ Failed" ;;
+            esac
+          }
+
           echo "# Security Scan Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Scan Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker Images Scan | ${{ needs.scan-docker-images.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| MCP Server Scan | ${{ needs.scan-mcp-server.result == 'success' || needs.scan-mcp-server.result == 'skipped' ? '✅ Passed' : '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Grype Scan | ${{ needs.grype-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Dockerfile Lint | ${{ needs.lint-dockerfiles.result == 'success' || needs.lint-dockerfiles.result == 'skipped' ? '✅ Passed' : '⚠️ Issues found' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Compliance Check | ${{ needs.compliance-check.result == 'success' && '✅ Passed' : '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Images Scan | $(get_status "${{ needs.scan-docker-images.result }}") |" >> $GITHUB_STEP_SUMMARY
+          echo "| MCP Server Scan | $(get_status "${{ needs.scan-mcp-server.result }}") |" >> $GITHUB_STEP_SUMMARY
+          echo "| Grype Scan | $(get_status "${{ needs.grype-scan.result }}") |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dockerfile Lint | $(get_status "${{ needs.lint-dockerfiles.result }}" "⚠️ Issues found") |" >> $GITHUB_STEP_SUMMARY
+          echo "| Compliance Check | $(get_status "${{ needs.compliance-check.result }}") |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Security Features" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

@@ -406,18 +406,29 @@ jobs:
     steps:
       - name: Generate build summary
         run: |
+          # Function to get status emoji and text
+          get_status() {
+            local result="$1"
+            local default_skip="$2"
+            case "$result" in
+              "success") echo "✅ Passed" ;;
+              "skipped") echo "${default_skip:-⊘ Skipped}" ;;
+              *) echo "❌ Failed" ;;
+            esac
+          }
+
           echo "# Docker CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Build Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Build | ${{ needs.build.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Security Scan | ${{ needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped' ? '✅ Passed' : '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Container Tests | ${{ needs.test.result == 'success' ? '✅ Passed' : '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| SBOM Generation | ${{ needs.sbom.result == 'success' ? '✅ Passed' : '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Compose Validation | ${{ needs.validate-compose.result == 'success' ? '✅ Passed' : '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Size Check | ${{ needs.size-check.result == 'success' ? '✅ Passed' : '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | $(get_status "${{ needs.build.result }}") |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Scan | $(get_status "${{ needs.security-scan.result }}") |" >> $GITHUB_STEP_SUMMARY
+          echo "| Container Tests | $(get_status "${{ needs.test.result }}") |" >> $GITHUB_STEP_SUMMARY
+          echo "| SBOM Generation | $(get_status "${{ needs.sbom.result }}") |" >> $GITHUB_STEP_SUMMARY
+          echo "| Compose Validation | $(get_status "${{ needs.validate-compose.result }}") |" >> $GITHUB_STEP_SUMMARY
+          echo "| Size Check | $(get_status "${{ needs.size-check.result }}") |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ needs.build.outputs.image-tag }}" != "" ]; then

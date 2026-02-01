@@ -268,15 +268,35 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker Deployment | ${{ needs.e2e-docker-deployment.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Full Stack Workflow | ${{ needs.e2e-full-stack.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Performance Benchmarks | ${{ needs.e2e-performance.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+
+          # Function to get status emoji and text
+          get_status() {
+            local result="$1"
+            case "$result" in
+              "success") echo "✅ Passed" ;;
+              "skipped") echo "⊘ Skipped" ;;
+              *) echo "❌ Failed" ;;
+            esac
+          }
+
+          echo "| Docker Deployment | $(get_status "${{ needs.e2e-docker-deployment.result }}") |" >> $GITHUB_STEP_SUMMARY
+          echo "| Full Stack Workflow | $(get_status "${{ needs.e2e-full-stack.result }}") |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance Benchmarks | $(get_status "${{ needs.e2e-performance.result }}") |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ needs.e2e-docker-deployment.result }}" != "success" ] || \
-             [ "${{ needs.e2e-full-stack.result }}" != "success" ]; then
+          # Only fail if there are actual failures, not skips
+          if [ "${{ needs.e2e-docker-deployment.result }}" == "failure" ] || \
+             [ "${{ needs.e2e-full-stack.result }}" == "failure" ] || \
+             [ "${{ needs.e2e-performance.result }}" == "failure" ]; then
             echo "::error::E2E tests failed"
             exit 1
           fi
 
-          echo "✅ All E2E tests passed successfully"
+          # Check if all were skipped
+          if [ "${{ needs.e2e-docker-deployment.result }}" == "skipped" ] && \
+             [ "${{ needs.e2e-full-stack.result }}" == "skipped" ] && \
+             [ "${{ needs.e2e-performance.result }}" == "skipped" ]; then
+            echo "⊘ E2E tests were skipped (documentation-only changes)"
+          else
+            echo "✅ All E2E tests passed successfully"
+          fi

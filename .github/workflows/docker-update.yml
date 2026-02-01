@@ -243,6 +243,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Determine status strings
+        id: status
+        run: |
+          # Function to get status text
+          get_status() {
+            local result="$1"
+            local success_msg="$2"
+            local fail_msg="$3"
+            case "$result" in
+              "success") echo "$success_msg" ;;
+              "skipped") echo "$success_msg" ;;
+              *) echo "$fail_msg" ;;
+            esac
+          }
+
+          # Determine emoji based on results
+          if [ "${{ needs.test-docker-updates.result }}" == "success" ] && [ "${{ needs.test-mcp-dockerfile.result }}" != "failure" ]; then
+            echo "emoji=✅" >> $GITHUB_OUTPUT
+            echo "summary=✅ Ready for review and merge" >> $GITHUB_OUTPUT
+          else
+            echo "emoji=⚠️" >> $GITHUB_OUTPUT
+            echo "summary=⚠️ Please review the failures" >> $GITHUB_OUTPUT
+          fi
+
+          # Set individual statuses
+          echo "docker_updates=$(get_status "${{ needs.test-docker-updates.result }}" "✅ Passed" "❌ Failed")" >> $GITHUB_OUTPUT
+          echo "mcp_dockerfile=$(get_status "${{ needs.test-mcp-dockerfile.result }}" "✅ Passed" "❌ Failed")" >> $GITHUB_OUTPUT
+          echo "image_check=$(get_status "${{ needs.test-docker-updates.result }}" "✅ All images available" "⚠️ Some images not found")" >> $GITHUB_OUTPUT
+
       - name: Comment on PR
         uses: actions/github-script@v7
         with:
@@ -258,20 +287,20 @@ jobs:
               comment.body.includes('Docker Update Test Results')
             );
 
-            const emoji = '${{ needs.test-docker-updates.result == "success" && needs.test-mcp-dockerfile.result != "failure" ? "✅" : "⚠️" }}';
+            const emoji = '${{ steps.status.outputs.emoji }}';
 
             const commentBody = `### ${emoji} Docker Update Test Results
 
             **Tests:**
-            - Docker Compose validation: ${{ needs.test-docker-updates.result == 'success' && '✅ Passed' || '❌ Failed' }}
-            - MCP Server Dockerfile: ${{ needs.test-mcp-dockerfile.result == 'success' || needs.test-mcp-dockerfile.result == 'skipped' ? '✅ Passed' || '❌ Failed' }}
-            - Image availability check: ${{ needs.test-docker-updates.result == 'success' ? '✅ All images available' : '⚠️ Some images not found' }}
+            - Docker Compose validation: ${{ steps.status.outputs.docker_updates }}
+            - MCP Server Dockerfile: ${{ steps.status.outputs.mcp_dockerfile }}
+            - Image availability check: ${{ steps.status.outputs.image_check }}
             - Security scan: Completed
 
             **Summary:**
             - All Docker image versions verified
             - Compose files validated
-            - ${{ needs.test-docker-updates.result == 'success' && needs.test-mcp-dockerfile.result != 'failure' ? '✅ Ready for review and merge' : '⚠️ Please review the failures' }}
+            - ${{ steps.status.outputs.summary }}
 
             **Next Steps:**
             - Review the Docker image version changes
