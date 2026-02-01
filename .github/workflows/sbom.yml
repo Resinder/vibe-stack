@@ -63,17 +63,17 @@ jobs:
           mkdir -p sbom-results
 
           # Generate SPDX JSON format
-          syft vibe-mcp-server:sbom \
+          syft docker:vibe-mcp-server:sbom \
             -o spdx-json \
             --file sbom-results/mcp-server-spdx.json
 
           # Generate CycloneDX JSON format
-          syft vibe-mcp-server:sbom \
+          syft docker:vibe-mcp-server:sbom \
             -o cyclonedx-json \
             --file sbom-results/mcp-server-cyclonedx.json
 
           # Generate table format for review
-          syft vibe-mcp-server:sbom \
+          syft docker:vibe-mcp-server:sbom \
             -o table \
             --file sbom-results/mcp-server-packages.txt
 
@@ -140,7 +140,7 @@ jobs:
           mkdir -p sbom-results
 
           # Generate SPDX JSON format
-          syft ${{ matrix.image.ref }} \
+          syft docker:${{ matrix.image.ref }} \
             -o spdx-json \
             --file sbom-results/${{ matrix.image.file }}
 
@@ -171,7 +171,7 @@ jobs:
 
       - name: Install CycloneDX CLI
         run: |
-          wget -qO /usr/local/bin/cdxgen https://github.com/CycloneDX/cdxgen/releases/download/v10.9.0/cdxgen-linux-amd64
+          curl -fsSL https://github.com/CycloneDX/cdxgen/releases/download/v10.9.0/cdxgen-linux-amd64 -o /usr/local/bin/cdxgen
           chmod +x /usr/local/bin/cdxgen
 
       - name: Generate MCP Server SBOM

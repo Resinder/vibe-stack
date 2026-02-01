@@ -35,7 +35,7 @@ jobs:
       - name: Validate Docker Compose configuration
         run: |
           echo "Validating docker-compose.yml syntax..."
-          docker-compose -f docker-compose.yml config --quiet
+          docker compose -f docker-compose.yml config --quiet
 
       - name: Validate .env.example
         run: |
@@ -249,7 +249,7 @@ jobs:
       - name: Verify documentation files exist
         run: |
           echo "Checking documentation files..."
-          docs=("README.md" "docs/HELPER.md" "LICENSE")
+          docs=("README.md" "docs/04-api/05-command-reference.md" "LICENSE")
           missing=()
           for doc in "${docs[@]}"; do
             if [ ! -f "$doc" ]; then
