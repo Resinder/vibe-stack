@@ -43,11 +43,11 @@ Vibe Stack is a Docker-based development environment with clean, layered archite
 
 ---
 
-## MCP Server Architecture (v1.1.11)
+## MCP Server Architecture (v1.1.12)
 
 ### Modular Layer Design (Zero Spaghetti)
 
-The v1.1.11 MCP Server features a clean 5-layer architecture that eliminates code duplication and provides clear separation of concerns with PostgreSQL storage, WebSocket support, and credential management.
+The v1.1.12 MCP Server features a clean 5-layer architecture that eliminates code duplication and provides clear separation of concerns with PostgreSQL storage, WebSocket support, and credential management.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -355,7 +355,7 @@ vibe-stack/
 ├── Makefile                    # CLI commands
 ├── .env                        # Environment variables
 │
-├── mcp-server/                 # MCP Server (v1.1.11 - Modular Architecture)
+├── mcp-server/                 # MCP Server (v1.1.12 - Modular Architecture)
 │   ├── src/                   # Source code (modules-based structure)
 │   │   ├── index.js           # Server entry point
 │   │   ├── package.json       # Dependencies & test scripts
@@ -695,7 +695,7 @@ const PATTERNS = {
 
 1. **Never commit secrets**
    - `.env` in `.gitignore`
-   - Use `.env1.1.11example` as template
+   - Use `.env1.1.12example` as template
 
 2. **API keys in dedicated files**
    - `agents/claude/settings.json`
@@ -737,7 +737,7 @@ const PATTERNS = {
 
 ## Testing
 
-### Modular Test Suite (v1.1.11)
+### Modular Test Suite (v1.1.12)
 
 The MCP server includes a comprehensive test suite with **319 tests** (309 passing, 10 skipped) across multiple test files:
 
@@ -774,7 +774,7 @@ npm run test:multi-user      # Multi-user collaboration scenarios
 | **Multi-User Scenarios** | multi-user-scenarios.test.js | 21 | Collaboration, concurrent ops |
 | **Total** | **13+ files** | **319** | **80 test suites** |
 
-### Enhanced Test Coverage (v1.1.11)
+### Enhanced Test Coverage (v1.1.12)
 
 **Boundary Tests (71 tests):**
 - Title length boundaries (min, max, Unicode, special characters)
@@ -939,7 +939,7 @@ make evolve
 
 ## Architecture Evolution
 
-### Key Features (Current Version v1.1.11)
+### Key Features (Current Version v1.1.12)
 
 1. **Modular Validation System**
    - Separate validators for different domains (tasks, planning, input)

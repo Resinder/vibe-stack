@@ -1,4 +1,10 @@
-## [1.1.11] - 2026-02-02
+## [1.1.12] - 2026-02-02
+
+### Automated Changes
+- Auto-incremented version based on commits
+
+### Commits in this release
+- fix: resolve SBOM workflow failures (190bb6a)
 
 ### Automated Changes
 - Auto-incremented version based on commits
