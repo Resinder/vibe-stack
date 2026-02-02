@@ -99,20 +99,18 @@ jobs:
 
           # Compare with version.json
           if [ "${{ matrix.compose-file }}" = "docker-compose.yml" ]; then
-            # Extract versions from compose file
-            NODE_VERSION=$(grep -A1 "image: node:" "${{ matrix.compose-file }}" | head -1 | awk '{print $2}' | cut -d':' -f2)
-            POSTGRES_VERSION=$(grep -A1 "image: postgres:" "${{ matrix.compose-file }}" | head -1 | awk '{print $2}' | cut -d':' -f2)
+            # Extract postgres version from compose file
+            POSTGRES_VERSION=$(grep "image: postgres:" "${{ matrix.compose-file }}" | awk '{print $2}' | cut -d':' -f2)
 
             echo "Compose file versions:"
-            echo "  Node: $NODE_VERSION"
             echo "  PostgreSQL: $POSTGRES_VERSION"
 
             # Check against version.json
-            if [ -n "$NODE_VERSION" ]; then
-              if grep -q "\"tag\": \"$NODE_VERSION\"" version.json; then
-                echo "✅ Node version matches version.json"
+            if [ -n "$POSTGRES_VERSION" ]; then
+              if grep -q "\"tag\": \"$POSTGRES_VERSION\"" version.json; then
+                echo "✅ PostgreSQL version matches version.json"
               else
-                echo "⚠️ Node version in compose file doesn't match version.json"
+                echo "⚠️ PostgreSQL version in compose file doesn't match version.json"
               fi
             fi
           fi

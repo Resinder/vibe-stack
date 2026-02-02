@@ -148,7 +148,7 @@ jobs:
           body: |
             ## Release v${{ steps.bump.outputs.version }}
 
-            **Date:** ${{ steps.env.DATE }}
+            **Date:** ${{ github.event.head_commit.timestamp[:10] }}
 
             ### 📦 Installation
 

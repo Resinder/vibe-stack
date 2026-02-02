@@ -61,6 +61,10 @@ jobs:
             bash -n scripts/dev/dev-server.sh
             echo "✓ scripts/dev/dev-server.sh syntax valid"
           fi
+          if [ -f scripts/setup/install.sh ]; then
+            bash -n scripts/setup/install.sh
+            echo "✓ scripts/setup/install.sh syntax valid"
+          fi
           if [ -f scripts/setup/init.sh ]; then
             bash -n scripts/setup/init.sh
             echo "✓ scripts/setup/init.sh syntax valid"
@@ -134,7 +138,7 @@ jobs:
         run: |
           echo "Verifying script permissions..."
           # Shell scripts should be executable (or have executable example)
-          scripts=("scripts/dev/dev-server.sh" "scripts/setup/init.sh" "scripts/operations/evolve.sh" "scripts/operations/test-harness.sh")
+          scripts=("scripts/dev/dev-server.sh" "scripts/setup/install.sh" "scripts/setup/init.sh")
           for script in "${scripts[@]}"; do
             if [ -f "$script" ]; then
               if [ -x "$script" ]; then

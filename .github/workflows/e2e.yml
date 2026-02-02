@@ -94,7 +94,7 @@ jobs:
 
           # Check Vibe-Kanban
           echo "Checking Vibe-Kanban..."
-          timeout 30 bash -c 'until curl -f http://localhost:4000/health || curl -f http://localhost:4000/; do sleep 2; done'
+          timeout 30 bash -c 'until curl -f http://localhost:4000/; do sleep 2; done'
 
           # Check MCP Server
           echo "Checking MCP Server..."
