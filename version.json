@@ -1,5 +1,5 @@
 {
-  "version": "1.1.13",
+  "version": "1.0.0",
   "metadata": {
     "name": "vibe-stack",
     "description": "AI-powered development environment with Vibe-Kanban, Open WebUI, and code-server",
@@ -13,22 +13,18 @@
     "forkedAt": "2025-01",
     "improvements": [
       "Fixed all test import paths for modular architecture",
-      "Implemented automated version management system",
-      "Added GitHub Actions auto-versioning workflow",
+      "Implemented automated Docker image updates with Renovate",
       "Created dynamic documentation build system",
       "Centralized version control (single source of truth)",
       "Updated project structure to match actual codebase",
       "Fixed 319 tests to pass successfully (309 passing, 10 skipped)",
-      "Added comprehensive version management utilities",
-      "Implemented automated Docker image updates with Renovate",
-      "Added multi-stage Docker builds for optimization",
-      "Implemented comprehensive security scanning"
+      "Implemented comprehensive security scanning",
+      "Docker image auto-versioning with E2E testing"
     ]
   },
   "components": {
     "mcp-server": "1.0.0",
-    "docs": "1.1.13",
-    "mcp_server": "1.1.13"
+    "docs": "1.0.0"
   },
   "docker": {
     "images": {
@@ -107,12 +103,11 @@
         "📊 Prometheus metrics + Grafana dashboards",
         "🔐 Enhanced security validation",
         "📝 Dynamic documentation system",
-        "🤖 Automated version management",
-        "⚡ Zero manual version updates required",
         "🐳 Automated Docker image updates with Renovate",
         "🔒 Comprehensive security scanning (Trivy, Grype)",
         "📦 Multi-stage Docker builds for optimization",
-        "📋 SBOM generation for compliance"
+        "📋 SBOM generation for compliance",
+        "🤖 Docker image version auto-detection with patch bump"
       ],
       "fixes": [
         "Fixed all import paths for modular structure",

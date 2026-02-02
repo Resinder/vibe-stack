@@ -1,6 +1,6 @@
 {
   "name": "vibe-stack",
-  "version": "1.1.13",
+  "version": "1.0.0",
   "description": "AI-powered development environment with Vibe-Kanban, Open WebUI, and code-server",
   "private": true,
   "type": "module",
@@ -8,6 +8,8 @@
     "mcp-server"
   ],
   "scripts": {
+    "docker:check-versions": "node scripts/utils/check-docker-versions.js",
+    "docker:update-versions": "node scripts/utils/update-docker-versions.js",
     "version:get": "node scripts/utils/version.js get",
     "version:patch": "node scripts/utils/version.js patch && npm run version:sync",
     "version:minor": "node scripts/utils/version.js minor && npm run version:sync",

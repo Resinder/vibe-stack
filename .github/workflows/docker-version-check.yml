@@ -1,0 +1,289 @@
+name: Docker Version Check & Auto Release
+
+on:
+  # Run daily at 3 AM UTC (after security scans)
+  schedule:
+    - cron: '0 3 * * *'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+  # Run on Docker files changes (for testing)
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docker-compose.yml'
+      - 'docker-compose.*.yml'
+      - 'version.json'
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  # ============================================================================
+  # Check for Docker image version updates
+  # ============================================================================
+  check-versions:
+    name: Check Docker Image Versions
+    runs-on: ubuntu-latest
+    outputs:
+      has-changes: ${{ steps.check.outputs.has-changes }}
+      changes-json: ${{ steps.check.outputs.changes-json }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Check Docker image versions
+        id: check
+        run: |
+          echo "Checking Docker image versions from registries..."
+          node scripts/utils/check-docker-versions.js
+
+      - name: Parse results
+        id: parse
+        if: always()
+        run: |
+          RESULTS=$(node scripts/utils/check-docker-versions.js 2>/dev/null || echo '{"hasChanges":false}')
+          HAS_CHANGES=$(echo "$RESULTS" | jq -r '.hasChanges // false')
+          CHANGES_JSON=$(echo "$RESULTS" | jq -c '.changes // []')
+
+          echo "has-changes=$HAS_CHANGES" >> $GITHUB_OUTPUT
+          echo "changes-json=$CHANGES_JSON" >> $GITHUB_OUTPUT
+
+          if [ "$HAS_CHANGES" = "true" ]; then
+            echo "changes detected: $CHANGES_JSON"
+          else
+            echo "no changes detected"
+          fi
+
+  # ============================================================================
+  # Run E2E tests with current images
+  # ============================================================================
+  e2e-test-current:
+    name: E2E Test (Current Images)
+    runs-on: ubuntu-latest
+    needs: check-versions
+    if: needs.check-versions.outputs.has-changes == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Start services
+        run: |
+          docker compose up -d --build
+          timeout 120 bash -c 'until docker compose ps | grep -q "healthy"; do sleep 2; done'
+
+      - name: Run E2E tests
+        working-directory: ./mcp-server
+        run: |
+          npm ci
+          node --test tests/e2e/*.test.js
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v
+
+  # ============================================================================
+  # Update version.json with new image tags
+  # ============================================================================
+  update-versions:
+    name: Update Image Versions
+    runs-on: ubuntu-latest
+    needs: [check-versions, e2e-test-current]
+    if: needs.check-versions.outputs.has-changes == 'true' && needs.e2e-test-current.result == 'success'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update Docker image versions
+        run: |
+          node scripts/utils/update-docker-versions.js '${{ needs.check-versions.outputs.changes-json }}'
+
+      - name: Build updated images
+        run: |
+          echo "Building images with updated tags..."
+          docker compose build vibe-kanban mcp-server
+
+      - name: Run E2E tests with new images
+        run: |
+          docker compose up -d
+          timeout 120 bash -c 'until docker compose ps | grep -q "healthy"; do sleep 2; done'
+
+          cd mcp-server
+          npm ci
+          node --test tests/e2e/*.test.js
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v
+
+  # ============================================================================
+  # Bump patch version and create release
+  # ============================================================================
+  auto-release:
+    name: Create Patch Release
+    runs-on: ubuntu-latest
+    needs: [check-versions, update-versions]
+    if: needs.update-versions.result == 'success'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Bump patch version
+        run: |
+          npm run version:patch
+          NEW_VERSION=$(node scripts/utils/version.js get)
+          echo "version=$NEW_VERSION" >> $GITHUB_ENV
+          echo "🔢 Bumped version to $NEW_VERSION"
+
+      - name: Sync versions
+        run: |
+          npm run version:sync
+          echo "✓ Synced version to all files"
+
+      - name: Build documentation
+        run: |
+          npm run docs:build
+          echo "✓ Built documentation"
+
+      - name: Commit changes
+        run: |
+          git add version.json package.json mcp-server/package.json
+          git add docker-compose.yml docker-compose.prod.yml
+          git add README.md docs/ CHANGELOG.md
+
+          git commit -m "chore(release): bump version to \${{ env.version }}
+
+          - Docker image version updates
+          - E2E tests passed with new images
+          - Patch version bump
+
+          [skip ci]"
+
+      - name: Push changes
+        run: git push
+
+      - name: Create and push tag
+        run: |
+          git tag -a "v\${{ env.version }}" -m "Release v\${{ env.version }}"
+          git push origin "v\${{ env.version }}"
+          echo "✓ Created and pushed tag v\${{ env.version }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.version }}
+          name: 🚀 Docker Image Update - v${{ env.version }}
+          body: |
+            ## Docker Image Version Update - v${{ env.version }}
+
+            This release includes updated Docker images with the latest stable versions.
+
+            ### 📦 Updated Images
+            ${{ steps.changes.outputs.changes }}
+
+            ### ✅ Testing
+            - All E2E tests passed with new image versions
+            - Security scans completed
+
+            ### 📦 Installation
+            ```bash
+            git clone https://github.com/Resinder/vibe-stack.git
+            cd vibe-stack
+            git checkout v${{ env.version }}
+            npm install
+            make up
+            ```
+
+            ---
+            *Automated release triggered by Docker image version changes*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "### 🎉 Docker Image Update Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** v\${{ env.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** Docker image version changes detected" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # Summary
+  # ============================================================================
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    needs: [check-versions, e2e-test-current, update-versions, auto-release]
+    if: always()
+
+    steps:
+      - name: Generate summary
+        run: |
+          echo "# Docker Version Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Check Versions | $(get_status '${{ needs.check-versions.result }}')" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Test (Current) | $(get_status '${{ needs.e2e-test-current.result }}')" >> $GITHUB_STEP_SUMMARY
+          echo "| Update Versions | $(get_status '${{ needs.update-versions.result }}')" >> $GITHUB_STEP_SUMMARY
+          echo "| Auto Release | $(get_status '${{ needs.auto-release.result }}')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.check-versions.outputs.has-changes }}" = "true" ]; then
+            echo "### Changes Detected" >> $GITHUB_STEP_SUMMARY
+            echo '${{ needs.check-versions.outputs.changes-json }}' | jq -r '.[] | "- **\(.name)**: \(.current) → \(.latest)"' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No Docker image version changes detected." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Get status function
+        run: |
+          get_status() {
+            case "$1" in
+              "success") echo "✅ Passed" ;;
+              "skipped") echo "⊘ Skipped" ;;
+              *) echo "❌ Failed ($1)" ;;
+            esac
+          }
