@@ -166,7 +166,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install CycloneDX CLI
         run: |
@@ -211,8 +211,8 @@ jobs:
 
       - name: Install Grype for vulnerability check
         run: |
-          wget -qO /usr/local/bin/grype https://raw.githubusercontent.com/anchore/grype/main/install.sh
-          chmod +x /usr/local/bin/grype
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+          grype version
 
       - name: Generate comprehensive SBOM summary
         run: |

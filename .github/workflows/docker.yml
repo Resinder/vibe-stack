@@ -253,8 +253,8 @@ jobs:
 
       - name: Install Syft
         run: |
-          wget -qO /usr/local/bin/syft https://raw.githubusercontent.com/anchore/syft/main/install.sh
-          chmod +x /usr/local/bin/syft
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          syft version
 
       - name: Pull image
         run: |
