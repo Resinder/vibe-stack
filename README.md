@@ -5,7 +5,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](https://docker.com)
 [![Tests](https://img.shields.io/badge/Tests-309%20Passing-brightgreen)](https://github.com/Resinder/vibe-stack)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1%2E1%2E10-orange)](https://github.com/Resinder/vibe-stack)
+[![Version](https://img.shields.io/badge/Version-1%2E1%2E11-orange)](https://github.com/Resinder/vibe-stack)
 
 > **🍴 Forked from [halilbarim/vibe-stack](https://github.com/halilbarim/vibe-stack)** | **319 Tests (309 passing)** | **Production Ready**
 
@@ -600,7 +600,7 @@ make test-e2e
 
 ## Project Status
 
-### ✅ Completed (v1.1.10)
+### ✅ Completed (v1.1.11)
 
 - [x] **Fork improvements** - All test imports fixed, 319 tests (309 passing, 10 skipped)
 - [x] **Auto versioning** - GitHub Actions automated version management

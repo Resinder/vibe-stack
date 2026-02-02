@@ -1,4 +1,10 @@
-## [1.1.10] - 2026-02-02
+## [1.1.11] - 2026-02-02
+
+### Automated Changes
+- Auto-incremented version based on commits
+
+### Commits in this release
+- fix: resolve workflow failures in security-scan and SBOM (071c409)
 
 ### Automated Changes
 - Auto-incremented version based on commits
