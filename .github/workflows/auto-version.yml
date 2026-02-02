@@ -75,12 +75,14 @@ jobs:
           echo "✓ Built documentation with new version"
 
       - name: Update CHANGELOG
+        id: changelog
         run: |
           VERSION="${{ steps.bump.outputs.version }}"
           DATE=$(date +%Y-%m-%d)
+          echo "date=$DATE" >> $GITHUB_OUTPUT
 
           # Create changelog entry
-          cat > CHANGELOG_ENTRY.md << 'EOF'
+          cat > CHANGELOG_ENTRY.md << EOF
           ## [${VERSION}] - ${DATE}
 
           ### Automated Changes
@@ -139,16 +141,14 @@ jobs:
           echo "✓ Created and pushed tag v${VERSION}"
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.bump.outputs.version }}
-          release_name: 🚀 Release v${{ steps.bump.outputs.version }}
+          name: 🚀 Release v${{ steps.bump.outputs.version }}
           body: |
             ## Release v${{ steps.bump.outputs.version }}
 
-            **Date:** ${{ github.event.head_commit.timestamp[:10] }}
+            **Date:** ${{ steps.changelog.outputs.date }}
 
             ### 📦 Installation
 
@@ -185,6 +185,8 @@ jobs:
             </details>
           draft: false
           prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Summary
         run: |
