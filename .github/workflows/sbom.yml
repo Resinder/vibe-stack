@@ -55,8 +55,8 @@ jobs:
 
       - name: Install Syft
         run: |
-          wget -qO /usr/local/bin/syft https://raw.githubusercontent.com/anchore/syft/main/install.sh
-          chmod +x /usr/local/bin/syft
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          syft version
 
       - name: Generate SBOM for MCP Server
         run: |
@@ -127,8 +127,8 @@ jobs:
 
       - name: Install Syft
         run: |
-          wget -qO /usr/local/bin/syft https://raw.githubusercontent.com/anchore/syft/main/install.sh
-          chmod +x /usr/local/bin/syft
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          syft version
 
       - name: Pull Docker image
         run: |
@@ -177,7 +177,7 @@ jobs:
           mkdir -p sbom-results
 
           cd mcp-server
-          npm ci --production
+          npm ci --production --ignore-scripts
 
           cdxgen . -o ../sbom-results/mcp-server-npm-sbom.json
 
