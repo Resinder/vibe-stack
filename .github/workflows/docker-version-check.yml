@@ -6,16 +6,7 @@ on:
     - cron: '0 3 * * *'
 
   # Allow manual trigger
-  workflow_dispatch:
-
-  # Run on Docker files changes (for testing)
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'docker-compose.yml'
-      - 'docker-compose.*.yml'
-      - 'version.json'
+  workflow_dispatch
 
 permissions:
   contents: write
