@@ -42,7 +42,7 @@ jobs:
       matrix:
         image:
           - name: "Node.js"
-            ref: "node:24.13.0-slim"
+            ref: "node:24.13.0-alpine"
           - name: "PostgreSQL"
             ref: "postgres:18.1-alpine"
           - name: "code-server"
@@ -78,7 +78,7 @@ jobs:
           TRIVY_CACHE_DIR: '/tmp/trivy-cache'
 
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
@@ -152,7 +152,7 @@ jobs:
           TRIVY_NO_PROGRESS: 'true'
 
       - name: Upload MCP Server results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-mcp-results.sarif'
@@ -254,7 +254,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload Hadolint results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'hadolint-results.sarif'

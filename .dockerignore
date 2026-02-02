@@ -1,137 +1,77 @@
-# ============================================================================
-# DOCKERIGNORE - Prevents files from being copied into Docker build contexts
-# ============================================================================
-# This file optimizes build performance and prevents secrets from leaking into
-# container image layers. Files listed here are excluded from Docker build
-# contexts and volume mounts.
-#
-# Reference: https://docs.docker.com/engine/reference/builder/#dockerignore-file
-# ============================================================================
-
-# ============================================================================
-# SECRETS & CREDENTIALS (CRITICAL)
-# ============================================================================
-
-# Environment files containing sensitive data
-.env
-.env.local
-.env.*.local
-
-# Claude Code runtime configuration
-.claude/
-.claude.json
-
-# Project secrets directory
-secrets/
-
-# SSH keys and credentials (except for intended bind mounts)
-*.pem
-*.key
-*.cert
-*.crt
-id_rsa*
-id_ed25519*
-known_hosts
-
-# ============================================================================
-# GIT & VERSION CONTROL
-# ============================================================================
-
-.git/
-.gitignore
-.gitattributes
-.github/
-
-# ============================================================================
-# DOCUMENTATION (not needed in containers)
-# ============================================================================
-
-*.md
-LICENSE
-CHANGELOG*
-CONTRIBUTING*
-
-# ============================================================================
-# DEVELOPMENT & IDE
-# ============================================================================
-
-.vscode/
-.idea/
-*.sublime-*
-.history/
-*.code-workspace
-*.swp
-*.swo
-*~
-
-# ============================================================================
-# DOCKER ARTIFACTS
-# ============================================================================
-
-docker-compose*.yml
-Dockerfile*
-.dockerignore
-
-# ============================================================================
-# OPERATING SYSTEM FILES
-# ============================================================================
-
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-desktop.ini
-
-# ============================================================================
-# LOGS & TEMPORARY FILES
-# ============================================================================
-
-*.log
-*.log.*
-*.tmp
-*.temp
-.cache/
-
-# ============================================================================
-# NODE.JS ARTIFACTS (may exist in repos/)
-# ============================================================================
-
+# Node modules
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 package-lock.json
-yarn.lock
-.pnpm-debug.log*
 
-# ============================================================================
-# TEST & COVERAGE ARTIFACTS
-# ============================================================================
-
+# Test files
 coverage/
 .nyc_output/
-*.test.js.snap
-__tests__/
+test-results/
+*.test.js
+tests/
 
-# ============================================================================
-# BUILD ARTIFACTS
-# ============================================================================
+# Documentation
+*.md
+docs/
+LICENSE
+README.md
+CHANGELOG.md
 
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.vscode/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# SSH keys (should never be in Docker image)
+.ssh/
+id_rsa*
+id_ed25519*
+
+# Secrets
+secrets/
+credentials/
+*.pem
+*.key
+
+# Build artifacts
 dist/
 build/
 out/
-.next/
-.nuxt/
-.cache/
-.parcel-cache/
 
-# ============================================================================
-# MISC
-# ============================================================================
-
-*.bak
-*.backup
-*.orig
+# Misc
+.editorconfig
+.prettierrc
+.eslintrc
+.eslintignore
+.prettierignore
