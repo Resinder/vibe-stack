@@ -1,9 +1,7 @@
 name: Auto Version & Release
 
 on:
-  push:
-    branches:
-      - main
+  # Only run on manual trigger to avoid unwanted releases
   workflow_dispatch:
     inputs:
       version_type:
@@ -43,18 +41,9 @@ jobs:
       - name: Determine version type
         id: version_type
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "type=${{ github.event.inputs.version_type }}" >> $GITHUB_OUTPUT
-          else
-            # Auto-determine based on commit messages
-            if git log --pretty=format:%s ${{ github.event.before }}..${{ github.event.after }} | grep -qiE "feat!|breaking|major"; then
-              echo "type=major" >> $GITHUB_OUTPUT
-            elif git log --pretty=format:%s ${{ github.event.before }}..${{ github.event.after }} | grep -qiE "feat|minor"; then
-              echo "type=minor" >> $GITHUB_OUTPUT
-            else
-              echo "type=patch" >> $GITHUB_OUTPUT
-            fi
-          fi
+          # Get version type from manual trigger input
+          echo "type=${{ github.event.inputs.version_type }}" >> $GITHUB_OUTPUT
+          echo "📋 Version type: ${{ github.event.inputs.version_type }}"
 
       - name: Increment version
         id: bump

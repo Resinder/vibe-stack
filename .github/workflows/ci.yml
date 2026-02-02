@@ -1,8 +1,9 @@
 # ============================================================================
 # Vibe Stack - CI/CD Pipeline
 # ============================================================================
-# GitHub Actions workflow for validating Docker Compose configuration,
-# running tests, and ensuring code quality standards.
+# GitHub Actions workflow for validating configuration files,
+# running tests, security checks, and ensuring code quality standards.
+# Note: Docker builds are handled by docker.yml workflow.
 
 name: CI/CD Pipeline
 
@@ -157,40 +158,12 @@ jobs:
           docker run --rm -i hadolint/hadolint < Dockerfile || true
 
   # ============================================================================
-  # DOCKER BUILD JOB - Test Docker image build
-  # ============================================================================
-  docker-build:
-    name: Test Docker Build
-    runs-on: ubuntu-latest
-    needs: validation
-    strategy:
-      matrix:
-        service: [mcp-server]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build service image
-        run: |
-          echo "Testing build for ${{ matrix.service }}..."
-          docker compose build --no-cache ${{ matrix.service }}
-          echo "✓ ${{ matrix.service }} builds successfully"
-
-      - name: Check image size
-        run: |
-          echo "Image size for ${{ matrix.service }}:"
-          docker images | grep ${{ matrix.service }} || docker images | grep node | head -1
-
-  # ============================================================================
   # TEST JOB - Run test suite
   # ============================================================================
   test:
     name: Run Test Suite
     runs-on: ubuntu-latest
-    needs: docker-build
+    needs: validation
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -314,7 +287,7 @@ jobs:
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [validation, security, docker-build, documentation, code-quality, test]
+    needs: [validation, security, documentation, code-quality, test]
     if: always()
     steps:
       - name: Check job results
@@ -322,13 +295,11 @@ jobs:
           echo "CI Pipeline Results:"
           echo "  Validation: ${{ needs.validation.result }}"
           echo "  Security: ${{ needs.security.result }}"
-          echo "  Docker Build: ${{ needs.docker-build.result }}"
           echo "  Documentation: ${{ needs.documentation.result }}"
           echo "  Code Quality: ${{ needs.code-quality.result }}"
           echo "  Test Suite: ${{ needs.test.result }}"
 
           if [ "${{ needs.validation.result }}" != "success" ] || \
-             [ "${{ needs.docker-build.result }}" != "success" ] || \
              [ "${{ needs.test.result }}" != "success" ]; then
             echo "::error::CI pipeline failed"
             exit 1
