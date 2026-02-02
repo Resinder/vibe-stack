@@ -46,7 +46,7 @@ jobs:
           - name: "PostgreSQL"
             ref: "postgres:18.1-alpine"
           - name: "code-server"
-            ref: "lscr.io/linuxserver/code-server:latest"
+            ref: "lscr.io/linuxserver/code-server:25.1.1"
           - name: "Open WebUI"
             ref: "ghcr.io/open-webui/open-webui:v0.7.2"
           - name: "Prometheus"
