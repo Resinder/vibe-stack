@@ -1,4 +1,12 @@
-## [${VERSION}] - ${DATE}
+## [1.1.9] - 2026-02-02
+
+### Automated Changes
+- Auto-incremented version based on commits
+
+### Commits in this release
+- fix: replace deprecated action and fix variable expansion (2bd0b44)
+- fix: resolve GitHub Actions workflow inconsistencies (2082a2d)
+- fix: resolve critical inconsistencies and security issues (8b0634d)
 
 ### Automated Changes
 - Auto-incremented version based on commits
