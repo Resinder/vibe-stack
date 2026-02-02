@@ -105,7 +105,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 
 # Security metadata
 LABEL maintainer="Vibe Stack <https://github.com/Resinder/vibe-stack>" \
-      version="1.0.0" \
+      version="1.1.13" \
       description="Vibe Stack MCP Server - Model Context Protocol server for task management" \
       org.opencontainers.image.title="vibe-mcp-server" \
       org.opencontainers.image.description="MCP Server for Vibe Stack integration" \

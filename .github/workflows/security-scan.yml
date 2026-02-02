@@ -42,7 +42,7 @@ jobs:
       matrix:
         image:
           - name: "Node.js"
-            ref: "node:20.18.0-slim"
+            ref: "node:24.13.0-slim"
           - name: "PostgreSQL"
             ref: "postgres:18.1-alpine"
           - name: "code-server"

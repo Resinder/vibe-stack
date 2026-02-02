@@ -108,7 +108,7 @@ jobs:
       matrix:
         image:
           - name: "node"
-            ref: "node:20.18.0-slim"
+            ref: "node:24.13.0-slim"
             file: "node-sbom.json"
           - name: "postgres"
             ref: "postgres:18.1-alpine"
