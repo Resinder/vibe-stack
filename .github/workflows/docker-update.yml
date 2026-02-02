@@ -224,11 +224,11 @@ jobs:
           SIZE=$(docker images vibe-mcp-server:test --format "{{.Size}}")
           echo "Image size: $SIZE"
 
-          # Compare with typical Node.js image sizes (should be < 1GB)
-          SIZE_MB=$(docker images vibe-mcp-server:test --format "{{.Size}}" | grep -oP '\d+(\.\d+)?(?= MB)' || echo 0)
+          # Extract size in MB (more portable regex)
+          SIZE_MB=$(docker images vibe-mcp-server:test --format "{{.Size}}" | grep -oE '[0-9]+(\.[0-9]+)?' | head -1 || echo 0)
 
-          if (( $(echo "$SIZE_MB < 1000" | bc -l) )); then
-            echo "✅ Image size is reasonable"
+          if [ "$SIZE_MB" -lt 1000 ] 2>/dev/null; then
+            echo "✅ Image size is reasonable ($SIZE_MB MB)"
           else
             echo "::warning::Image size is large ($SIZE). Consider multi-stage build optimization."
           fi

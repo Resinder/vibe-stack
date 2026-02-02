@@ -303,14 +303,15 @@ jobs:
         run: |
           echo "Verifying Docker image versions match version.json..."
 
-          # Extract Node.js version from docker-compose.yml
-          NODE_COMPOSE=$(grep -A1 "image: node:" docker-compose.yml | grep image | awk '{print $2}' | cut -d':' -f2)
-          NODE_VERSION=$(jq -r '.docker.images.node.tag' version.json)
+          # Note: Node.js uses build context in docker-compose.yml, not image: node:
+          # Verify PostgreSQL version from docker-compose.yml
+          POSTGRES_COMPOSE=$(grep "image: postgres:" docker-compose.yml | awk '{print $2}' | cut -d':' -f2)
+          POSTGRES_VERSION=$(jq -r '.docker.images.postgres.tag' version.json)
 
-          if [ "$NODE_COMPOSE" = "$NODE_VERSION" ]; then
-            echo "✅ Node version matches"
+          if [ "$POSTGRES_COMPOSE" = "$POSTGRES_VERSION" ]; then
+            echo "✅ PostgreSQL version matches"
           else
-            echo "::warning::Node version mismatch: compose=$NODE_COMPOSE, version.json=$NODE_VERSION"
+            echo "::warning::PostgreSQL version mismatch: compose=$POSTGRES_COMPOSE, version.json=$POSTGRES_VERSION"
           fi
 
       - name: Check for security labels

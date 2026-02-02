@@ -89,11 +89,10 @@ jobs:
           path: sbom-results/
           retention-days: 90
 
-      - name: Attach SBOM to release (on main branch)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Attach SBOM to release (on tag push)
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.run_number }}
           files: |
             sbom-results/mcp-server-spdx.json
             sbom-results/mcp-server-cyclonedx.json
