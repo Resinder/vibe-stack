@@ -145,7 +145,7 @@ log-versions: ## Log current image versions (internal)
 	@echo "Node.js:" >> $(VERSION_LOG)
 	@docker images --format "{{.Repository}}:{{.Tag}} | {{.ID}} | {{.CreatedAt}}" | grep "node.*20-slim" >> $(VERSION_LOG) 2>/dev/null || echo "  node:20-slim not found" >> $(VERSION_LOG)
 	@echo "code-server:" >> $(VERSION_LOG)
-	@docker images --format "{{.Repository}}:{{.Tag}} | {{.ID}} | {{.CreatedAt}}" | grep "code-server.*latest" >> $(VERSION_LOG) 2>/dev/null || echo "  code-server:latest not found" >> $(VERSION_LOG)
+	@docker images --format "{{.Repository}}:{{.Tag}} | {{.ID}} | {{.CreatedAt}}" | grep "code-server.*25.1.1" >> $(VERSION_LOG) 2>/dev/null || echo "  code-server:25.1.1 not found" >> $(VERSION_LOG)
 	@echo "" >> $(VERSION_LOG)
 	@echo "$(GREEN)✓ Versions logged to $(VERSION_LOG)$(NC)"
 
@@ -156,8 +156,8 @@ versions: ## Show current image versions and digests
 	@echo "$(BLUE)node:20-slim$(NC)"
 	@docker images --format "  Tag: {{.Tag}} | Digest: {{.ID}} | Created: {{.CreatedAt}}" | grep "node.*20-slim" | head -1 || echo "  $(YELLOW)Not pulled yet$(NC)"
 	@echo ""
-	@echo "$(BLUE)codercom/code-server:latest$(NC)"
-	@docker images --format "  Tag: {{.Tag}} | Digest: {{.ID}} | Created: {{.CreatedAt}}" | grep "code-server.*latest" | head -1 || echo "  $(YELLOW)Not pulled yet$(NC)"
+	@echo "$(BLUE)lscr.io/linuxserver/code-server:25.1.1$(NC)"
+	@docker images --format "  Tag: {{.Tag}} | Digest: {{.ID}} | Created: {{.CreatedAt}}" | grep "code-server.*25.1.1" | head -1 || echo "  $(YELLOW)Not pulled yet$(NC)"
 	@echo ""
 	@echo "$(CYAN)Version History ($(VERSION_LOG)):$(NC)"
 	@tail -20 $(VERSION_LOG) 2>/dev/null || echo "  No version history yet"
@@ -786,7 +786,7 @@ doctor: ## Full diagnostics check with version tracking
 	@command -v docker-compose >/dev/null 2>&1 && echo "  $(GREEN)✓$(NC) Installed: $$(docker-compose --version)" || echo "  $(YELLOW)⚠$(NC) Using 'docker compose' (v2)"
 	@echo ""
 	@echo "$(BLUE)Image Versions (Current):$(NC)"
-	@docker images --format "  {{.Repository}}:{{.Tag}} | {{.ID}}" | grep -E "node.*20-slim|code-server.*latest" || echo "  $(YELLOW)No images pulled yet$(NC)"
+	@docker images --format "  {{.Repository}}:{{.Tag}} | {{.ID}}" | grep -E "node.*20-slim|code-server.*25.1.1" || echo "  $(YELLOW)No images pulled yet$(NC)"
 	@echo ""
 	@echo "$(BLUE)Configuration Files:$(NC)"
 	@test -f .env && echo "  $(GREEN)✓$(NC) .env exists" || echo "  $(RED)✗$(NC) .env missing (run 'make setup')"

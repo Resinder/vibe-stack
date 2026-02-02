@@ -46,10 +46,9 @@
       },
       "codeServer": {
         "repository": "lscr.io/linuxserver/code-server",
-        "tag": "latest",
+        "tag": "25.1.1",
         "description": "Browser-based VS Code",
-        "source": "https://github.com/linuxserver/docker-code-server",
-        "note": "linuxserver images use rolling releases, :latest is stable"
+        "source": "https://github.com/linuxserver/docker-code-server"
       },
       "openWebUI": {
         "repository": "ghcr.io/open-webui/open-webui",

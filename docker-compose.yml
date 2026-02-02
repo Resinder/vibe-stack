@@ -26,7 +26,7 @@ services:
       args:
         POSTHOG_API_KEY: ${POSTHOG_API_KEY:-}
         POSTHOG_API_ENDPOINT: ${POSTHOG_API_ENDPOINT:-}
-    image: vibe-kanban:latest
+    image: vibe-kanban:1.1.11
     container_name: vibe-kanban
     restart: unless-stopped
 
@@ -88,11 +88,10 @@ services:
   # CODE-SERVER SERVICE (Browser-based VS Code)
   # ============================================================================
   code-server:
-    # VS Code in browser - latest
-    # Using latest tag as linuxserver doesn't use semantic versioning
-    # Auto-updated via Renovate
+    # VS Code in browser
+    # Using pinned version for security
     # Reference: https://github.com/linuxserver/docker-code-server
-    image: lscr.io/linuxserver/code-server:latest
+    image: lscr.io/linuxserver/code-server:25.1.1
     container_name: code-server
 
     # Network ports (linuxserver/code-server uses port 8443 internally)

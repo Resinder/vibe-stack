@@ -10,7 +10,7 @@ services:
       args:
         POSTHOG_API_KEY: ${POSTHOG_API_KEY:-}
         POSTHOG_API_ENDPOINT: ${POSTHOG_API_ENDPOINT:-}
-    image: vibe-kanban:latest
+    image: vibe-kanban:1.1.11
     container_name: vibe-kanban-prod
     restart: unless-stopped
     ports:
@@ -60,7 +60,7 @@ services:
       context: ./mcp-server
       dockerfile: Dockerfile
       target: production
-    image: vibe-mcp-server:latest
+    image: vibe-mcp-server:1.1.11
     container_name: vibe-mcp-server-prod
     restart: unless-stopped
     ports:
@@ -145,7 +145,7 @@ services:
 
   # code-server - Browser-based VS Code
   code-server:
-    image: lscr.io/linuxserver/code-server:latest
+    image: lscr.io/linuxserver/code-server:25.1.1
     container_name: code-server-prod
     restart: unless-stopped
     ports:
