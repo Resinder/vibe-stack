@@ -170,8 +170,7 @@ jobs:
 
       - name: Install CycloneDX CLI
         run: |
-          curl -fsSL https://github.com/CycloneDX/cdxgen/releases/download/v10.9.0/cdxgen-linux-amd64 -o /usr/local/bin/cdxgen
-          chmod +x /usr/local/bin/cdxgen
+          npm install -g @cyclonedx/cdxgen
 
       - name: Generate MCP Server SBOM
         run: |

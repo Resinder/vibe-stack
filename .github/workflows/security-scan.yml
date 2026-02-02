@@ -250,7 +250,7 @@ jobs:
         with:
           dockerfile: 'mcp-server/Dockerfile'
           format: 'sarif'
-          output: 'hadolint-results.sarif'
+          output-file: 'hadolint-results.sarif'
         continue-on-error: true
 
       - name: Upload Hadolint results
