@@ -1,4 +1,10 @@
-## [1.1.9] - 2026-02-02
+## [1.1.10] - 2026-02-02
+
+### Automated Changes
+- Auto-incremented version based on commits
+
+### Commits in this release
+- fix: resolve GitHub Actions workflow issues (40620da)
 
 ### Automated Changes
 - Auto-incremented version based on commits
