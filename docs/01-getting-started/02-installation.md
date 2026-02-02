@@ -53,6 +53,20 @@ cd vibe-stack
 
 ### Step 2: Run Setup Script
 
+**Quick Install (Recommended):**
+
+**Linux/macOS:**
+```bash
+./scripts/setup/install.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+scripts\setup\install.bat
+```
+
+**Comprehensive Setup (with self-healing):**
+
 **Linux/macOS:**
 ```bash
 ./scripts/setup/init.sh
@@ -95,7 +109,7 @@ brew install git
 # Clone and setup
 git clone https://github.com/Resinder/vibe-stack.git
 cd vibe-stack
-./scripts/setup/init.sh
+./scripts/setup/install.sh
 ```
 
 #### Manual Installation
@@ -149,7 +163,7 @@ sudo apt-get install -y git
 ```bash
 git clone https://github.com/Resinder/vibe-stack.git
 cd vibe-stack
-./scripts/setup/init.sh
+./scripts/setup/install.sh
 ```
 
 ### Windows
@@ -169,7 +183,7 @@ git clone https://github.com/Resinder/vibe-stack.git
 cd vibe-stack
 
 # Run setup script
-scripts\setup\init.bat
+scripts\setup\install.bat
 
 # Start services
 make up
@@ -435,10 +449,10 @@ rm -rf vibe-stack
 
 After installation:
 
-1. **[Quick Start Guide](QUICKSTART.md)** - Get started in 5 minutes
+1. **[Quick Start Guide](01-quick-start.md)** - Get started in 5 minutes
 2. **[Configuration Guide](../05-operations/01-configuration.md)** - Configure your setup
 3. **[User Guide](../02-user-guide/01-user-guide.md)** - Learn how to use Vibe Stack
-4. **[Examples](../examples/)** - See practical examples
+4. **[Troubleshooting](../06-development/05-troubleshooting.md)** - Get help with common issues
 
 ---
 
@@ -447,9 +461,9 @@ After installation:
 - **Documentation**: [docs/](../)
 - **Issues**: [GitHub Issues](https://github.com/Resinder/vibe-stack/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/Resinder/vibe-stack/discussions)
-- **Troubleshooting**: [TROUBLESHOOTING.md](../TROUBLESHOOTING.md)
+- **Troubleshooting**: [Troubleshooting Guide](../06-development/05-troubleshooting.md)
 
 ---
 
-**Installation Guide Version:** 1.0.0
-**Last Updated:** 2026-01-28
+**Installation Guide Version:** 1.1.7
+**Last Updated:** 2026-02-02

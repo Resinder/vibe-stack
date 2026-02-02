@@ -260,25 +260,6 @@ restart: down up ## Restart all services
 # ============================================================================
 # ENVIRONMENT-SPECIFIC TARGETS
 # ============================================================================
-.PHONY: dev-up
-dev-up: ## Start development environment
-	@echo "$(CYAN)Starting development environment...$(NC)"
-	@NODE_ENV=development $(DOCKER_COMPOSE) up -d
-	@echo ""
-	@echo "$(GREEN)✓ Development environment started$(NC)"
-	@echo ""
-	@echo "$(CYAN)Development features:$(NC)"
-	@echo "  • Debug logging enabled"
-	@echo "  • Hot reload for code-server"
-	@echo "  • Volume mounts for code"
-	@echo ""
-
-.PHONY: dev-down
-dev-down: ## Stop development environment
-	@echo "$(CYAN)Stopping development environment...$(NC)"
-	@$(DOCKER_COMPOSE) down
-	@echo "$(GREEN)✓ Development environment stopped$(NC)"
-
 .PHONY: prod-up
 prod-up: ## Start production environment
 	@echo "$(CYAN)Starting production environment...$(NC)"
@@ -545,7 +526,7 @@ reset: ## Full reset (WARNING: deletes all data)
 	echo; \
 	if [[ $$REPLY == "yes" ]]; then \
 		$(DOCKER_COMPOSE) down -v; \
-		docker volume rm vibe-stack_vibe_config vibe-stack_vibe_data vibe-stack_code_server_data vibe-stack_open_webui_data 2>/dev/null || true; \
+		docker volume rm vibe-stack_vibe_config vibe-stack_vibe_data vibe-stack_code_server_data vibe-stack_open_webui_data vibe-stack_postgres_data 2>/dev/null || true; \
 		rm -f $(VERSION_LOG); \
 		echo "$(GREEN)✓ Reset complete$(NC)"; \
 		echo "$(YELLOW)Run 'make setup' to reinitialize$(NC)"; \
@@ -592,7 +573,7 @@ snapshot-state: ## Snapshot current state for rollback
 rolling-restart: ## Restart services one at a time with health checks
 	@echo "$(CYAN)Starting rolling restart...${NC)"
 	@echo ""
-	@for service in vibe-kanban code-server open-webui; do \
+	@for service in postgres vibe-kanban mcp-server code-server open-webui; do \
 		echo "$(CYAN)Restarting $$service...${NC}"; \
 		$(DOCKER_COMPOSE) stop $$service; \
 		$(DOCKER_COMPOSE) up -d $$service; \
@@ -767,7 +748,12 @@ health: ## Check service health
 	@echo "$(CYAN)Checking service health...$(NC)"
 	@echo ""
 	@echo "$(BLUE)Vibe-Kanban (port 4000):$(NC)"
-	@curl -sf http://localhost:4000/api/health >/dev/null 2>&1 && \
+	@curl -sf http://localhost:4000/ >/dev/null 2>&1 && \
+		echo "  $(GREEN)● Healthy$(NC)" || \
+		echo "  $(YELLOW)● Starting/Unreachable$(NC)"
+	@echo ""
+	@echo "$(BLUE)MCP Server (port 4001):$(NC)"
+	@curl -sf http://localhost:4001/health >/dev/null 2>&1 && \
 		echo "  $(GREEN)● Healthy$(NC)" || \
 		echo "  $(YELLOW)● Starting/Unreachable$(NC)"
 	@echo ""

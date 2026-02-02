@@ -149,7 +149,8 @@ services:
 
 networks:
   vibe-network:
-    external: true
+    name: vibe-network
+    external: false
 
 volumes:
   prometheus-data:

@@ -207,3 +207,11 @@ volumes:
   # Seed data for PostgreSQL
   postgres-seed:
     driver: local
+
+# =============================================================================
+# DEVELOPMENT NETWORKS
+# =============================================================================
+networks:
+  default:
+    name: vibe-network
+    external: false

@@ -291,7 +291,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/docker/postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U vibeuser -d vibestack"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vibeuser} -d ${POSTGRES_DB:-vibestack}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -329,3 +329,11 @@ volumes:
   # PostgreSQL data (for state management and persistence)
   postgres_data:
     driver: local
+
+# ============================================================================
+# NETWORKS
+# ============================================================================
+networks:
+  default:
+    name: vibe-network
+    driver: bridge

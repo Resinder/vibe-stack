@@ -4,31 +4,48 @@
 services:
   # Vibe-Kanban - AI Agent Orchestration Platform
   vibe-kanban:
-    image: vibe-stack/vibe-kanban:latest
+    build:
+      context: ./repos/vibe-kanban
+      dockerfile: Dockerfile
+      args:
+        POSTHOG_API_KEY: ${POSTHOG_API_KEY:-}
+        POSTHOG_API_ENDPOINT: ${POSTHOG_API_ENDPOINT:-}
+    image: vibe-kanban:latest
     container_name: vibe-kanban-prod
     restart: unless-stopped
     ports:
-      - "${VIBE_PORT:-4000}:4000"
+      - "${VIBE_PORT:-4000}:3000"
+      - "3000-3100:3000-3100"
     volumes:
-      - ./config/state:/app/config:rw
-      - ./logs:/app/logs:rw
+      - vibe_config:/data
+      - vibe_data:/repos
+      - ./repos:/repos
     environment:
-      - NODE_ENV=production
-      - LOG_LEVEL=info
+      - HOST=0.0.0.0
+      - PORT=3000
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-vibeuser}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-vibepass}
+      - POSTGRES_DB=${POSTGRES_DB:-vibestack}
+      - VIBE_BOARD_DEFAULT_FILE=/data/.vibe-kanban-board.json
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/health"]
-      interval: 30s
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 15s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 256M
+          cpus: '4.0'
+          memory: 4G
         reservations:
-          cpus: '0.1'
-          memory: 64M
+          cpus: '1.0'
+          memory: 1G
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - vibe-network
     logging:
@@ -39,34 +56,47 @@ services:
 
   # MCP Server - API Bridge with 10 Tools
   mcp-server:
-    image: vibe-stack/mcp-server:latest
-    container_name: mcp-server-prod
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+      target: production
+    image: vibe-mcp-server:latest
+    container_name: vibe-mcp-server-prod
     restart: unless-stopped
     ports:
-      - "${MCP_PORT:-4001}:4001"
+      - "4001:4001"
     volumes:
-      - ./config/state:/app/config:rw
-      - ./logs:/app/logs:rw
+      - ./.vibe-kanban-bridge.json:/data/.vibe-kanban-bridge.json
+      - ./services/open-webui-custom:/custom:ro
     environment:
+      - BRIDGE_FILE=/data/.vibe-kanban-bridge.json
+      - HTTP_PORT=4001
       - NODE_ENV=production
-      - LOG_LEVEL=info
-      - PORT=4001
-      - API_KEYS=${API_KEYS}
-      - JWT_SECRET=${JWT_SECRET}
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGDATABASE=${POSTGRES_DB:-vibestack}
+      - PGUSER=${POSTGRES_USER:-vibeuser}
+      - PGPASSWORD=${POSTGRES_PASSWORD:-vibepass}
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY:-CHANGE_THIS_GENERATE_WITH_openssl_rand_base64_48}
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 10s
     deploy:
       resources:
         limits:
-          cpus: '1.0'
-          memory: 512M
+          cpus: '0.5'
+          memory: 256M
         reservations:
-          cpus: '0.25'
-          memory: 128M
+          cpus: '0.1'
+          memory: 64M
+    depends_on:
+      vibe-kanban:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     networks:
       - vibe-network
     logging:
@@ -81,26 +111,30 @@ services:
     container_name: open-webui-prod
     restart: unless-stopped
     ports:
-      - "${OPEN_WEBUI_PORT:-8081}:8080"
+      - "8081:8080"
     environment:
-      - NODE_ENV=production
-      - LOG_LEVEL=info
+      - ENABLE_OLLAMA_API=false
+      - DATA_DIR=/app/backend/data
+      - MODELS=
     volumes:
-      - open-webui-data:/app/backend/data:rw
+      - open_webui_data:/app/backend/data
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 30s
     deploy:
       resources:
         limits:
-          cpus: '2.0'
-          memory: 2G
+          cpus: '1.0'
+          memory: 1G
         reservations:
-          cpus: '0.5'
-          memory: 512M
+          cpus: '0.25'
+          memory: 256M
+    depends_on:
+      code-server:
+        condition: service_healthy
     networks:
       - vibe-network
     logging:
@@ -115,32 +149,28 @@ services:
     container_name: code-server-prod
     restart: unless-stopped
     ports:
-      - "${CODE_SERVER_PORT:-8443}:8443"
+      - "8443:8443"
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Etc/UTC
-      - PASSWORD=${CODE_SERVER_PASSWORD}
-      - HASHED_PASSWORD=
-      - SUDO_PASSWORD=false
-      - PROXY_DOMAIN=code-server.yourdomain.com
+      - PASSWORD=${CODE_SERVER_PASSWORD:-dev123}
+      - DOCKER_USER=root
+      - DEFAULT_WORKSPACE=/home/coder/repos
     volumes:
-      - ./repos:/config/workspace:rw
-      - code-server-data:/config:rw
+      - ./repos:/home/coder/repos
+      - code_server_data:/home/coder
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8443/health"]
-      interval: 30s
+      test: ["CMD", "curl", "-f", "http://localhost:8443/"]
+      interval: 15s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 30s
     deploy:
       resources:
         limits:
-          cpus: '2.0'
-          memory: 2G
+          cpus: '1.0'
+          memory: 1G
         reservations:
-          cpus: '0.5'
-          memory: 512M
+          cpus: '0.25'
+          memory: 256M
     networks:
       - vibe-network
     logging:
@@ -177,15 +207,56 @@ services:
           cpus: '0.1'
           memory: 64M
 
+  # PostgreSQL - Database Service
+  postgres:
+    image: postgres:18.1-alpine
+    container_name: vibe-postgres-prod
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-vibestack}
+      - POSTGRES_USER=${POSTGRES_USER:-vibeuser}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-vibepass}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vibeuser} -d ${POSTGRES_DB:-vibestack}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    networks:
+      - vibe-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 networks:
   vibe-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
+    name: vibe-network
+    external: false
 
 volumes:
-  open-webui-data:
+  vibe_config:
     driver: local
-  code-server-data:
+  vibe_data:
+    driver: local
+  code_server_data:
+    driver: local
+  open_webui_data:
+    driver: local
+  postgres_data:
     driver: local

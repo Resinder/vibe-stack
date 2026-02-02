@@ -634,7 +634,7 @@ make test-e2e
 
 ## Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
+We welcome contributions! See [Contributing Guide](docs/06-development/02-contributing.md) for guidelines.
 
 ### Development Setup
 
